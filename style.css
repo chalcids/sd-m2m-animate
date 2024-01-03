@@ -1,0 +1,172 @@
+#m2m_animate_interrupt, #m2m_animate_skip {
+    position: absolute;
+    width: 50%;
+    height: 100%;
+    background: #b4c0cc;
+    display: none;
+}
+
+/*#m2m_animate_modnet_model, #m2m_animate_merge_background {*/
+/*    display: none;*/
+/*}*/
+
+#modnet_background_movie {
+    display: none;
+}
+
+
+#m2m_animate_video {
+    display: none;
+}
+
+#m2m_animate_generate {
+    min-height: 7.5em;
+}
+
+@media screen and (min-width: 2500px) {
+    #m2m_animate_gallery {
+        min-height: 768px;
+    }
+}
+
+#m2m_animate_gallery img {
+    object-fit: scale-down;
+}
+
+#m2m_animate_tools {
+    gap: 0.4em;
+}
+
+#m2m_animate_actions_column {
+    margin: 0.35rem 0.75rem 0.35rem 0;
+}
+
+
+#m2m_animate_actions_column {
+    gap: 0;
+    margin-right: .75rem;
+}
+
+
+#m2m_animate_styles_row {
+    gap: 0.25em;
+    margin-top: 0.3em;
+}
+
+#m2m_animate_styles_row > button {
+    margin: 0;
+}
+
+#m2m_animate_styles {
+    padding: 0;
+}
+
+#m2m_animate_styles > label > div {
+    min-height: 3.2em;
+}
+
+#m2m_animate_extra_networks .search {
+    display: inline-block;
+    max-width: 16em;
+    margin: 0.3em;
+    align-self: center;
+}
+
+#m2m_animate_extra_view {
+    width: auto;
+}
+
+#m2m_animate_preview {
+    position: absolute;
+    width: 320px;
+    left: 0;
+    right: 0;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 34px;
+    z-index: 100;
+    border: none;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+}
+
+@media screen and (min-width: 768px) {
+    #m2m_animate_preview {
+        position: absolute;
+    }
+}
+
+@media screen and (max-width: 767px) {
+    #m2m_animate_preview {
+        position: relative;
+    }
+}
+
+#m2m_animate_preview div.left-0.top-0 {
+    display: none;
+}
+
+
+#m2m_animate_interrupt, #m2m_animate_skip {
+    position: absolute;
+    width: 50%;
+    height: 100%;
+    background: #b4c0cc;
+    display: none;
+}
+
+#m2m_animate_interrupt {
+    left: 0;
+    border-radius: 0.5rem 0 0 0.5rem;
+}
+
+#m2m_animate_skip {
+    right: 0;
+    border-radius: 0 0.5rem 0.5rem 0;
+}
+
+#m2m_animate_mov video {
+    height: 480px;
+    max-height: 480px;
+    min-height: 480px;
+}
+
+#m2m_animate_video video {
+    height: 480px;
+    max-height: 480px;
+    min-height: 480px;
+}
+
+#m2m_animate_video_frame img {
+    height: 480px;
+    max-height: 480px;
+    min-height: 480px;
+}
+
+
+#m2m_animate_checkboxes {
+    margin-bottom: 0.5em;
+    margin-left: 0em;
+}
+
+#m2m_animate_checkboxes > div {
+    flex: 0;
+    white-space: nowrap;
+    min-width: auto;
+}
+
+#m2m_animate_extra_view {
+    width: auto;
+}
+
+/* dataframe */
+#m2m_animate_video_editor_custom_data_frame button {
+    display: none;
+}
+
+#m2m_animate_keyframe_custom_container>div {
+    display: flex;
+    justify-content: center;
+    /*增加间距*/
+    gap: 1.5em;
+}
