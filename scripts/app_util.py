@@ -143,18 +143,20 @@ def create_folders(video, start_date):
     main_path = f"{shared.opts.data.get('m2m_animate_output_dir', m2m_animate_output_dir)}/{file_name}"
     if not os.path.exists(main_path):
            os.mkdir(main_path)
-    stage = 1
     if(shared.opts.data.get("m2m_animate_export_frames", m2m_animate_export_frames) == True):
-        frames_preprocess = f"{main_path}/frames_stage_{stage}"
+        frames_preprocess = f"{main_path}/frames_export"
         if not os.path.exists(frames_preprocess):
             os.mkdir(frames_preprocess)
-        stage = 2
     else:
         frames_preprocess = None
-    frames_postprocess = f"{main_path}/frames_stage_{stage}"
+    frames_mask = f"{main_path}/frames_mask"
+    if not os.path.exists(frames_mask):
+           os.mkdir(frames_mask)
+    
+    frames_postprocess = f"{main_path}/frames_generated"
     if not os.path.exists(frames_postprocess):
            os.mkdir(frames_postprocess)
-    return frames_preprocess, frames_postprocess,main_path, fileName
+    return frames_preprocess, frames_postprocess,frames_mask,main_path, fileName
 
 def save_images(images,path):
     #print(f"Saving Images to: {path}")
@@ -165,6 +167,6 @@ def save_images(images,path):
         save_image(img,i,path)
     return
 
-def save_image(image,i,path):
-    image.save(f"{path}/frame_{i+1}.png")
+def save_image(image,i,path,extra=""):
+    image.save(f"{path}/frame{extra}_{i+1}.png")
     return

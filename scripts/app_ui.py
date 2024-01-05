@@ -432,7 +432,17 @@ def on_ui_tabs():
                                 value=-1,
                                 elem_id=f"{id_part}_max_frames",
                             )
-
+                        with gr.Accordion("Extra settings",open=False):
+                            gr.HTML('# Occlusion mask params:')
+                            with gr.Row():
+                                with gr.Column(scale=1, variant='compact'):
+                                    occlusion_mask_blur = gr.Slider(label='Occlusion blur strength', minimum=0, maximum=10, step=0.1, value=3, interactive=True) 
+                                    #gr.HTML('')
+                                    #occlusion_mask_trailing = gr.Checkbox(label="Occlusion trailing", info="Reduce ghosting but adds more flickering to the video", value=True, interactive=True)
+                                with gr.Column(scale=1, variant='compact'):
+                                    occlusion_mask_flow_multiplier = gr.Slider(label='Occlusion flow multiplier', minimum=0, maximum=10, step=0.1, value=5, interactive=True) 
+                                    occlusion_mask_difo_multiplier = gr.Slider(label='Occlusion diff origin multiplier', minimum=0, maximum=10, step=0.1, value=2, interactive=True)
+                                    occlusion_mask_difs_multiplier = gr.Slider(label='Occlusion diff styled multiplier', minimum=0, maximum=10, step=0.1, value=0, interactive=True)
                     elif category == "cfg":
                         with gr.Row():
                             cfg_scale = gr.Slider(
@@ -458,9 +468,7 @@ def on_ui_tabs():
                             pass
 
                     elif category == "accordions":
-                        with gr.Row(
-                            elem_id=f"{id_part}_accordions", elem_classes="accordions"
-                        ):
+                        with gr.Row(elem_id=f"{id_part}_accordions", elem_classes="accordions"):
                             scripts_m2m_animate.setup_ui_for_section(category)
 
                     elif category == "override_settings":
@@ -534,7 +542,11 @@ def on_ui_tabs():
                     max_frames,
                     enable_hr,
                     hr_scale,
-                    hr_upscaler
+                    hr_upscaler,
+                    occlusion_mask_blur,
+                    occlusion_mask_flow_multiplier,
+                    occlusion_mask_difo_multiplier,
+                    occlusion_mask_difs_multiplier
                 ]
                 + custom_inputs,
                 outputs=[
