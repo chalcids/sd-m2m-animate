@@ -17,7 +17,7 @@ from modules.ui import plaintext_to_html
 import modules.scripts as scripts
 
 from scripts.app_util import create_folders, get_mov_all_images, images_to_video, save_images, save_image
-from scripts.app_config import m2m_animate_output_dir, m2m_animate_export_frames
+from scripts.app_config import m2m_animate_output_dir, m2m_animate_export_frames,m2m_animate_save_mask
 from scripts.raft_utils import RAFT_clear_memory,RAFT_estimate_flow,compute_diff_map
 
 
@@ -95,7 +95,8 @@ def process_m2m_animate(p, gen_dict,mov_file, movie_frames, max_frames, enable_h
             occlusion_mask = Image.fromarray(occlusion_mask)
             alpha_mask = ImageOps.invert(img.split()[-1]).convert('L').point(lambda x: 255 if x > 0 else 0, mode='1')
             mask = ImageChops.lighter(alpha_mask, occlusion_mask.convert('L')).convert('L')
-            save_image(mask,i,frames_mask,f"_mask_{i}")
+            if(shared.opts.data.get("m2m_animate_save_mask", m2m_animate_save_mask) == True):
+                save_image(mask,i,frames_mask,f"_mask_{i}")
             p = create_processor(gen_dict,mask,seed_info)
             
         p.init_images = [img] * p.batch_size
@@ -115,7 +116,7 @@ def process_m2m_animate(p, gen_dict,mov_file, movie_frames, max_frames, enable_h
             generate_images.append(gen_image)
 
     video = save_video(generate_images, movie_frames,main_path,file_name)
-
+    RAFT_clear_memory()
     return video
 
 def animate(id_task: str,

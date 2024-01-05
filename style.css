@@ -158,15 +158,3 @@
 #m2m_animate_extra_view {
     width: auto;
 }
-
-/* dataframe */
-#m2m_animate_video_editor_custom_data_frame button {
-    display: none;
-}
-
-#m2m_animate_keyframe_custom_container>div {
-    display: flex;
-    justify-content: center;
-    /*增加间距*/
-    gap: 1.5em;
-}

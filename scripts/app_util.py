@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 from modules import shared
 from modules.shared import state
-from scripts.app_config import m2m_animate_output_dir, m2m_animate_export_frames
+from scripts.app_config import m2m_animate_output_dir, m2m_animate_export_frames,m2m_animate_save_mask
 
 
 def calc_video_w_h(video_path):
@@ -149,10 +149,12 @@ def create_folders(video, start_date):
             os.mkdir(frames_preprocess)
     else:
         frames_preprocess = None
-    frames_mask = f"{main_path}/frames_mask"
-    if not os.path.exists(frames_mask):
-           os.mkdir(frames_mask)
-    
+    if(shared.opts.data.get("m2m_animate_save_mask", m2m_animate_save_mask) == True):
+        frames_mask = f"{main_path}/frames_mask"
+        if not os.path.exists(frames_mask):
+            os.mkdir(frames_mask)
+    else:
+        frames_mask = None
     frames_postprocess = f"{main_path}/frames_generated"
     if not os.path.exists(frames_postprocess):
            os.mkdir(frames_postprocess)
