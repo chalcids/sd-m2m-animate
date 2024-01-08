@@ -49,7 +49,7 @@ from scripts import app_hook as patches
 from scripts import app_util
 from scripts import m2m_animate
 from scripts.m2m_animate import scripts_m2m_animate
-from scripts.app_config import m2m_animate_output_dir, m2m_animate_export_frames, m2m_animate_save_mask, m2m_animate_ignore_first_frame
+from scripts.app_config import m2m_animate_output_dir, m2m_animate_export_frames, m2m_animate_save_mask
 
 id_part = "m2m_animate"
 
