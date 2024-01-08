@@ -49,7 +49,7 @@ from scripts import app_hook as patches
 from scripts import app_util
 from scripts import m2m_animate
 from scripts.m2m_animate import scripts_m2m_animate
-from scripts.app_config import m2m_animate_output_dir, m2m_animate_export_frames, m2m_animate_save_mask
+from scripts.app_config import m2m_animate_output_dir, m2m_animate_export_frames, m2m_animate_save_mask, m2m_animate_ignore_first_frame
 
 id_part = "m2m_animate"
 
@@ -437,8 +437,8 @@ def on_ui_tabs():
                             with gr.Row():
                                 with gr.Column(scale=1, variant='compact'):
                                     occlusion_mask_blur = gr.Slider(label='Occlusion blur strength', minimum=0, maximum=10, step=0.1, value=3, interactive=True) 
-                                    #gr.HTML('')
-                                    #occlusion_mask_trailing = gr.Checkbox(label="Occlusion trailing", info="Reduce ghosting but adds more flickering to the video", value=True, interactive=True)
+                                    blend_alpha = gr.Slider(label='Warped prev frame vs Current frame blend alpha', minimum=0, maximum=1, step=0.1, value=1, interactive=True) 
+                                    occlusion_mask_trailing = gr.Checkbox(label="Occlusion trailing", info="Reduce ghosting but adds more flickering to the video", value=True, interactive=True)
                                 with gr.Column(scale=1, variant='compact'):
                                     occlusion_mask_flow_multiplier = gr.Slider(label='Occlusion flow multiplier', minimum=0, maximum=10, step=0.1, value=5, interactive=True) 
                                     occlusion_mask_difo_multiplier = gr.Slider(label='Occlusion diff origin multiplier', minimum=0, maximum=10, step=0.1, value=2, interactive=True)
@@ -546,7 +546,9 @@ def on_ui_tabs():
                     occlusion_mask_blur,
                     occlusion_mask_flow_multiplier,
                     occlusion_mask_difo_multiplier,
-                    occlusion_mask_difs_multiplier
+                    occlusion_mask_difs_multiplier,
+                    occlusion_mask_trailing,
+                    blend_alpha
                 ]
                 + custom_inputs,
                 outputs=[

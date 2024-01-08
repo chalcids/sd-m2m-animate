@@ -77,6 +77,8 @@ def get_mov_all_images(file, frames, rgb=False):
                 if rgb:
                     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 image_list.append(frame)
+                if(count == 1):
+                    image_list.append(frame)
                 count += 1
         fs += 1
     cap.release()
@@ -125,6 +127,8 @@ def images_to_video_cv2(images, frames, out_path, codec):
     return out_path
 
 def create_folders(video, start_date):
+    if not os.path.exists(shared.opts.data.get("m2m_animate_output_dir", m2m_animate_output_dir)):
+        os.mkdir(shared.opts.data.get("m2m_animate_output_dir", m2m_animate_output_dir))
     file_name = os.path.basename(video)
     file_names = os.path.splitext(file_name)
     file_name = file_names[0].replace(" ", "")
