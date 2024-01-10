@@ -49,7 +49,7 @@ from scripts import app_hook as patches
 from scripts import app_util
 from scripts import m2m_animate
 from scripts.m2m_animate import scripts_m2m_animate
-from scripts.app_config import m2m_animate_output_dir, m2m_animate_export_frames, m2m_animate_save_mask
+from scripts.app_config import m2m_animate_output_dir, m2m_animate_export_frames, m2m_animate_save_mask,m2m_animate_enable_mask
 
 id_part = "m2m_animate"
 
@@ -586,6 +586,13 @@ def on_ui_settings():
             m2m_animate_export_frames, "Save orginal frames of video in a folder",gr.Checkbox,{"interactive": True}, section=section
         ),
     )
+    shared.opts.add_option(
+        "m2m_animate_enable_mask",
+        shared.OptionInfo(
+            m2m_animate_enable_mask, "Use Masking to better enhance the video generation",gr.Checkbox,{"interactive": True}, section=section
+        ),
+    )
+    
     shared.opts.add_option(
         "m2m_animate_save_mask",
         shared.OptionInfo(

@@ -170,9 +170,9 @@ def save_images(images,path):
         if state.interrupted:
             break
         img = PIL.Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB), 'RGB')
-        save_image(img,i,path)
+        save_image(img,(i+1),path)
     return
 
 def save_image(image,i,path,extra=""):
-    image.save(f"{path}/frame{extra}_{i+1}.png")
+    image.save(f"{path}/frame{extra}_{i}.png")
     return

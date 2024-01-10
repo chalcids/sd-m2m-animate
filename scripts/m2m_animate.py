@@ -18,7 +18,7 @@ from modules.ui import plaintext_to_html
 import modules.scripts as scripts
 
 from scripts.app_util import create_folders, get_mov_all_images, images_to_video, save_images, save_image
-from scripts.app_config import m2m_animate_output_dir, m2m_animate_export_frames,m2m_animate_save_mask
+from scripts.app_config import m2m_animate_output_dir, m2m_animate_export_frames,m2m_animate_save_mask,m2m_animate_enable_mask
 from scripts.raft_utils import RAFT_clear_memory,generate_mask
 
 
@@ -57,7 +57,10 @@ def process_m2m_animate(p, gen_dict,mov_file, movie_frames, max_frames, enable_h
 
     max_frames = int(max_frames)
 
-    state.job_count = max_frames  # * p.n_iter
+    if(shared.opts.data.get("m2m_animate_enable_mask", m2m_animate_enable_mask) == True):
+        state.job_count = max_frames * 2  # * p.n_iter
+    else:
+        state.job_count = max_frames
     generate_images = []
     prev_frame_alpha_mask = None
     prev_img = None
@@ -76,8 +79,12 @@ def process_m2m_animate(p, gen_dict,mov_file, movie_frames, max_frames, enable_h
     for i, image in enumerate(images):
         if i >= max_frames:
             break
-
-        state.job = f"{i + 1} out of {max_frames}"
+        
+        if(shared.opts.data.get("m2m_animate_enable_mask", m2m_animate_enable_mask) == True):
+            state.job = f"{i + 1} out of {(max_frames * 2)}"
+        else:
+            state.job = f"{i + 1} out of {max_frames}"
+        
         if state.skipped:
             state.skipped = False
 
@@ -86,35 +93,46 @@ def process_m2m_animate(p, gen_dict,mov_file, movie_frames, max_frames, enable_h
 
         img = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB), 'RGB')
 
-        if(i > 0):
-            init_img, mask,prev_frame_alpha_mask,alpha_mask,warped_styled_frame = generate_mask(i,img,prev_img,prev_gen_img,prev_frame_alpha_mask,occlusion_mask_blur,occlusion_mask_flow_multiplier,occlusion_mask_difo_multiplier,occlusion_mask_difs_multiplier,occlusion_mask_trailing,blend_alpha,frames_mask)
-            pmask = create_processor(gen_dict,mask,seed_info)
-            pmask.init_images = [init_img] * pmask.batch_size
-            procmask = scripts_m2m_animate.run(pmask, *args)
-            if procmask is None:
-                processed_mask = process_images(pmask)
-                processed_frame = np.array(processed_mask.images[0])[...,:3]
-                # normalizing the colors
-                processed_frame = sdimages.resize_image(0, Image.fromarray(processed_frame), warped_styled_frame.shape[1], warped_styled_frame.shape[0], upscaler_name=hr_upscaler)
-                processed_frame = skimage.exposure.match_histograms(np.array(processed_frame),np.array(img) , channel_axis=None)
-                processed_frame = processed_frame.astype(float) * alpha_mask + warped_styled_frame.astype(float) * (1 - alpha_mask)
-                processed_frame = np.clip(processed_frame, 0, 255).astype(np.uint8)
-                init_img = Image.fromarray(processed_frame)
-                if(shared.opts.data.get("m2m_animate_save_mask", m2m_animate_save_mask) == True):
-                    save_image(init_img,i,frames_mask,f"_mask_{i}")
+        if(shared.opts.data.get("m2m_animate_enable_mask", m2m_animate_enable_mask) == True):
+            if(i > 0):
+                init_img, mask,prev_frame_alpha_mask,alpha_mask,warped_styled_frame = generate_mask(i,img,prev_img,prev_gen_img,prev_frame_alpha_mask,occlusion_mask_blur,occlusion_mask_flow_multiplier,occlusion_mask_difo_multiplier,occlusion_mask_difs_multiplier,occlusion_mask_trailing,blend_alpha,frames_mask)
+                pmask = create_processor(gen_dict,mask,seed_info)
+                pmask.init_images = [init_img] * pmask.batch_size
+                procmask = scripts_m2m_animate.run(pmask, *args)
+                if procmask is None:
+                    print(f'current progress: {i + 1}/{(max_frames * 2)}')
+                    processed_mask = process_images(pmask)
+                    processed_frame = np.array(processed_mask.images[0])[...,:3]
+                    # normalizing the colors
+                    processed_frame = sdimages.resize_image(0, Image.fromarray(processed_frame), warped_styled_frame.shape[1], warped_styled_frame.shape[0], upscaler_name=hr_upscaler)
+                    processed_frame = skimage.exposure.match_histograms(np.array(processed_frame),np.array(img) , channel_axis=None)
+                    processed_frame = processed_frame.astype(float) * alpha_mask + warped_styled_frame.astype(float) * (1 - alpha_mask)
+                    processed_frame = np.clip(processed_frame, 0, 255).astype(np.uint8)
+                    init_img = Image.fromarray(processed_frame)
+                    if(shared.opts.data.get("m2m_animate_save_mask", m2m_animate_save_mask) == True):
+                        save_image(init_img,i,frames_mask,f"_mask_{i}")
+            else:
+                init_img = img
         else:
             init_img = img
+        
+        if(shared.opts.data.get("m2m_animate_enable_mask", m2m_animate_enable_mask) == True):
+            state.job = f"{i + 2} out of {(max_frames * 2)}"
+        print("\nGenerating Image")
         p.init_images = [init_img] * p.batch_size
         proc = scripts_m2m_animate.run(p, *args)
         if proc is None:
-            print(f'current progress: {i + 1}/{max_frames}')
+            if(shared.opts.data.get("m2m_animate_enable_mask", m2m_animate_enable_mask) == True):
+                print(f'current progress: {i + 2}/{(max_frames * 2)}')
+            else:
+                print(f'current progress: {i + 1}/{max_frames}')
             processed = process_images(p)
             gen_image = processed.images[0]
             prev_img = init_img.copy()
             prev_gen_img = gen_image.copy()
             if(i > 0):
                 if(enable_hr):
-                    print("Scaling Image")
+                    print("\nScaling Image")
                     new_width = w * hr_scale
                     new_height = h * hr_scale
                     gen_image = sdimages.resize_image(0, gen_image, new_width, new_height, upscaler_name=hr_upscaler)
