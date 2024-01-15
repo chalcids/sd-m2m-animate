@@ -315,7 +315,7 @@ def on_ui_tabs():
 
     # with gr.Blocks(analytics_enabled=False) as m2m_animate_interface:
     with gr.TabItem(
-        "m2m_animate", id=f"tab_{id_part}", elem_id=f"tab_{id_part}"
+        "M2M Animate", id=f"tab_{id_part}", elem_id=f"tab_{id_part}"
     ) as m2m_animate_interface:
         toprow = Toprow(is_img2img=False, id_part=id_part)
         dummy_component = gr.Label(visible=False)

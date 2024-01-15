@@ -133,8 +133,8 @@ def process_m2m_animate(p, gen_dict,mov_file, movie_frames, max_frames, enable_h
             if(i > 0):
                 if(enable_hr):
                     print("\nScaling Image")
-                    new_width = w * hr_scale
-                    new_height = h * hr_scale
+                    new_width = int(w * hr_scale)
+                    new_height = int(h * hr_scale)
                     gen_image = sdimages.resize_image(0, gen_image, new_width, new_height, upscaler_name=hr_upscaler)
                 save_image(gen_image,i,frames_postprocess)
                 generate_images.append(gen_image)
