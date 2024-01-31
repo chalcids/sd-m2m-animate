@@ -140,7 +140,38 @@ def process_m2m_animate(p, gen_dict,mov_file, movie_frames, max_frames, enable_h
                 generate_images.append(gen_image)
 
     video = save_video(generate_images, movie_frames,main_path,file_name)
-    save_settings(gen_dict,main_path)
+    settings_dict = {
+        "prompt":gen_dict["prompt"],
+        "negative_prompt":gen_dict["negative_prompt"],
+        "styles":gen_dict["prompt_styles"],
+        "sampler_name":gen_dict["sampler_name"],
+        "seed":seed_info["seed"],
+        "subseed":seed_info["subseed"],
+        "subseed_strength":seed_info["subseed_strength"],
+        "seed_resize_from_h":seed_info["seed_resize_from_h"],
+        "seed_resize_from_w":seed_info["seed_resize_from_w"],
+        "seed_enable_extras":seed_info["seed_enable_extras"],
+        "steps":gen_dict["steps"],
+        "cfg_scale":gen_dict["cfg_scale"],
+        "width":gen_dict["width"],
+        "height":gen_dict["height"],
+        "resize_mode":gen_dict["resize_mode"],
+        "denoising_strength":gen_dict["denoising_strength"],
+        "image_cfg_scale":gen_dict["image_cfg_scale"],
+        "noise_multiplier":gen_dict["noise_multiplier"],
+        "mask_blur":4,
+        "inpainting_fill":1,
+        "inpaint_full_res":False,
+        "inpaint_full_res_padding":32,
+        "inpainting_mask_invert":0,
+    }
+    if(enable_hr):      
+        new_width = int(w * hr_scale)
+        new_height = int(h * hr_scale)
+        settings_dict["new_width"] = new_width
+        settings_dict["new_height"] = new_height
+        settings_dict["hr_upscaler"] = hr_upscaler
+    save_settings(settings_dict,main_path)
     RAFT_clear_memory()
     return video
 
