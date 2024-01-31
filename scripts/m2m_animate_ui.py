@@ -45,11 +45,11 @@ from modules.ui_components import (
     FormGroup,
     InputAccordion,
 )
-from scripts import app_hook as patches
-from scripts import app_util
+from scripts import m2m_animate_hook as patches
+from scripts import m2m_animate_util
 from scripts import m2m_animate
 from scripts.m2m_animate import scripts_m2m_animate
-from scripts.app_config import m2m_animate_output_dir, m2m_animate_export_frames, m2m_animate_save_mask,m2m_animate_enable_mask
+from scripts.m2m_animate_config import m2m_animate_output_dir, m2m_animate_export_frames, m2m_animate_save_mask,m2m_animate_enable_mask
 
 id_part = "m2m_animate"
 
@@ -569,7 +569,7 @@ def calc_video_w_h(video, width, height):
     if not video:
         return width, height
 
-    return app_util.calc_video_w_h(video)
+    return m2m_animate_util.calc_video_w_h(video)
 
 
 def on_ui_settings():

@@ -4,11 +4,12 @@ import cv2
 import numpy
 import imageio
 import PIL.Image
+import json 
 from tqdm import tqdm
 
 from modules import shared
 from modules.shared import state
-from scripts.app_config import m2m_animate_output_dir, m2m_animate_export_frames,m2m_animate_save_mask
+from scripts.m2m_animate_config import m2m_animate_output_dir, m2m_animate_export_frames,m2m_animate_save_mask
 
 
 def calc_video_w_h(video_path):
@@ -176,3 +177,8 @@ def save_images(images,path):
 def save_image(image,i,path,extra=""):
     image.save(f"{path}/frame{extra}_{i}.png")
     return
+
+def save_settings(dict,path):
+    # Convert and write JSON object to file
+    with open(f"{path}/settings.json", "w") as outfile: 
+        json.dump(dict, outfile)
