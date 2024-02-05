@@ -428,9 +428,10 @@ def on_ui_tabs():
                                 value=30,
                             )
                             max_frames = gr.Number(
-                                label="Max FPS",
+                                label="Total Frames",
                                 value=-1,
                                 elem_id=f"{id_part}_max_frames",
+                                interactive=False
                             )
                         with gr.Accordion("Extra settings",open=False):
                             gr.HTML('# Occlusion mask params:')
@@ -507,6 +508,12 @@ def on_ui_tabs():
                 outputs=[width, height],
             )
 
+            init_mov.change(
+                fn=calc_video_frames,
+                inputs=[init_mov, movie_frames, max_frames],
+                outputs=[movie_frames, max_frames],
+            )
+
             hr_resolution_preview_inputs = [enable_hr, width, height, hr_scale]
 
             for component in hr_resolution_preview_inputs:
@@ -570,6 +577,12 @@ def calc_video_w_h(video, width, height):
         return width, height
 
     return m2m_animate_util.calc_video_w_h(video)
+
+def calc_video_frames(video, movie_frames, max_frames):
+    if not video:
+        return movie_frames, max_frames
+
+    return m2m_animate_util.calc_video_frames(video)
 
 
 def on_ui_settings():

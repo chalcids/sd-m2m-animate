@@ -25,6 +25,11 @@ def calc_video_w_h(video_path):
 
     return width, height
 
+def calc_video_frames(video_path):
+    fps = get_mov_fps(video_path)
+    frames = get_mov_frame_count(video_path)
+    return fps, frames
+
 
 def get_mov_frame_count(file):
     if file is None:
