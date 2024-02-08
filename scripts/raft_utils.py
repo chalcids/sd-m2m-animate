@@ -9,12 +9,34 @@ import torch
 import argparse
 from RAFT.raft import RAFT
 from RAFT.utils.utils import InputPadder
+from PIL import Image
+
+from modules import shared, devices
 
 import modules.paths as ph
 import gc
 
 RAFT_model = None
 fgbg = cv2.createBackgroundSubtractorMOG2(history=500, varThreshold=16, detectShadows=True)
+
+
+def generate_mask(i,cur_frame,prev_frame,prev_gen_frame,prev_frame_alpha_mask,occlusion_mask_blur, occlusion_mask_flow_multiplier,occlusion_mask_difo_multiplier, occlusion_mask_difs_multiplier,occlusion_mask_trailing,blend_alpha, frames_mask):
+  print("\nGenerate Mask")
+  device = devices.get_optimal_device()
+  prev_frame = np.asarray(prev_frame)
+  cur_frame = np.asarray(cur_frame)
+  next_flow, prev_flow, occlusion_mask = RAFT_estimate_flow(prev_frame,cur_frame,device)
+  alpha_mask, warped_styled_frame = compute_diff_map(next_flow, prev_flow, prev_frame, cur_frame, prev_gen_frame,occlusion_mask_blur, occlusion_mask_flow_multiplier,occlusion_mask_difo_multiplier, occlusion_mask_difs_multiplier)
+  if(occlusion_mask_trailing == True and prev_frame_alpha_mask is not None):
+    alpha_mask = alpha_mask + prev_frame_alpha_mask * 0.5
+  prev_frame_alpha_mask = alpha_mask
+  alpha_mask = np.clip(alpha_mask, 0, 1)
+  occlusion_mask = np.clip(alpha_mask * 255, 0, 255).astype(np.uint8)
+  warped_styled_frame = cur_frame.astype(float) * alpha_mask + warped_styled_frame.astype(float) * (1 - alpha_mask)
+  mask = Image.fromarray(occlusion_mask)
+  init_img = warped_styled_frame * (1 - blend_alpha) + cur_frame * blend_alpha
+  init_img = Image.fromarray(np.clip(init_img, 0, 255).astype(np.uint8))
+  return init_img,mask,prev_frame_alpha_mask, alpha_mask,warped_styled_frame
 
 def background_subtractor(frame, fgbg):
   fgmask = fgbg.apply(frame)

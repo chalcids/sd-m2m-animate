@@ -4,11 +4,13 @@ import cv2
 import numpy
 import imageio
 import PIL.Image
+import json 
 from tqdm import tqdm
 
 from modules import shared
 from modules.shared import state
-from scripts.app_config import m2m_animate_output_dir, m2m_animate_export_frames,m2m_animate_save_mask
+from modules.paths_internal import extensions_dir
+from scripts.m2m_animate_config import m2m_animate_output_dir, m2m_animate_export_frames,m2m_animate_save_mask
 
 
 def calc_video_w_h(video_path):
@@ -23,6 +25,11 @@ def calc_video_w_h(video_path):
     cap.release()
 
     return width, height
+
+def calc_video_frames(video_path):
+    fps = get_mov_fps(video_path)
+    frames = get_mov_frame_count(video_path)
+    return fps, frames
 
 
 def get_mov_frame_count(file):
@@ -77,6 +84,8 @@ def get_mov_all_images(file, frames, rgb=False):
                 if rgb:
                     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 image_list.append(frame)
+                if(count == 1):
+                    image_list.append(frame)
                 count += 1
         fs += 1
     cap.release()
@@ -125,6 +134,8 @@ def images_to_video_cv2(images, frames, out_path, codec):
     return out_path
 
 def create_folders(video, start_date):
+    if not os.path.exists(shared.opts.data.get("m2m_animate_output_dir", m2m_animate_output_dir)):
+        os.mkdir(shared.opts.data.get("m2m_animate_output_dir", m2m_animate_output_dir))
     file_name = os.path.basename(video)
     file_names = os.path.splitext(file_name)
     file_name = file_names[0].replace(" ", "")
@@ -166,9 +177,51 @@ def save_images(images,path):
         if state.interrupted:
             break
         img = PIL.Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB), 'RGB')
-        save_image(img,i,path)
+        save_image(img,(i+1),path)
     return
 
 def save_image(image,i,path,extra=""):
-    image.save(f"{path}/frame{extra}_{i+1}.png")
+    image.save(f"{path}/frame{extra}_{i}.png")
     return
+
+def save_settings(dict,path):
+    # Convert and write JSON object to file
+    with open(f"{path}/settings.json", "w") as outfile: 
+        json.dump(dict, outfile)
+
+def save_settings(prompt,neg_prompt,height,width,steps,sampler_name,cfg_scale,denoising_strength,noise_multiplier,enable_hr,hr_scale,hr_upscaler):
+    #print(f"{extensions_dir}\sd-m2m-animate\config.json")
+    settings_dict = {
+        "prompt":prompt,
+        "neg_prompt":neg_prompt,
+        "width":width,
+        "height":height,
+        "steps":steps,
+        "sampler_name":sampler_name,
+        "cfg_scale":cfg_scale,
+        "denoising_strength":denoising_strength,
+        "noise_multiplier":noise_multiplier,
+        "enable_hr":enable_hr,
+        "hr_scale":hr_scale,
+        "hr_upscaler":hr_upscaler
+    }
+    with open(f"{extensions_dir}\sd-m2m-animate\config.json", "w") as outfile: 
+        json.dump(settings_dict, outfile)
+
+def load_settings(prompt,neg_prompt,height,width,steps,sampler_name,cfg_scale,denoising_strength,noise_multiplier,enable_hr,hr_scale,hr_upscaler):
+    #print(f"{extensions_dir}\sd-m2m-animate\config.json")
+    with open(f"{extensions_dir}\sd-m2m-animate\config.json") as outfile: 
+        settings = json.loads(outfile.read())
+        prompt = settings['prompt']
+        neg_prompt = settings['neg_prompt']
+        width = settings['width']
+        height = settings['height']
+        steps = settings['steps']
+        sampler_name = settings['sampler_name']
+        cfg_scale = settings['cfg_scale']
+        denoising_strength = settings['denoising_strength']
+        noise_multiplier = settings['noise_multiplier']
+        enable_hr = settings['enable_hr']
+        hr_scale = settings['hr_scale']
+        hr_upscaler = settings['hr_upscaler']
+    return prompt,neg_prompt,height, width, steps,sampler_name,cfg_scale,denoising_strength,noise_multiplier,enable_hr,hr_scale,hr_upscaler

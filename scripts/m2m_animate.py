@@ -6,6 +6,7 @@ from tqdm import tqdm
 import numpy as np
 
 import cv2
+import skimage
 from PIL import Image, ImageOps, ImageChops
 import modules
 import modules.images as sdimages
@@ -16,9 +17,9 @@ from modules.shared import opts, state
 from modules.ui import plaintext_to_html
 import modules.scripts as scripts
 
-from scripts.app_util import create_folders, get_mov_all_images, images_to_video, save_images, save_image
-from scripts.app_config import m2m_animate_output_dir, m2m_animate_export_frames,m2m_animate_save_mask
-from scripts.raft_utils import RAFT_clear_memory,RAFT_estimate_flow,compute_diff_map
+from scripts.m2m_animate_util import create_folders, get_mov_all_images, images_to_video, save_images, save_image, save_settings
+from scripts.m2m_animate_config import m2m_animate_output_dir, m2m_animate_export_frames,m2m_animate_save_mask,m2m_animate_enable_mask
+from scripts.raft_utils import RAFT_clear_memory,generate_mask
 
 
 scripts_m2m_animate = scripts.ScriptRunner()
@@ -37,7 +38,7 @@ def save_video(images, fps,path,file_name, extension='.mp4'):
     return video
 
 
-def process_m2m_animate(p, gen_dict,mov_file, movie_frames, max_frames, enable_hr, hr_scale,hr_upscaler, w, h, occlusion_mask_blur,occlusion_mask_flow_multiplier, occlusion_mask_difo_multiplier,occlusion_mask_difs_multiplier, args):
+def process_m2m_animate(p, gen_dict,mov_file, movie_frames, max_frames, enable_hr, hr_scale,hr_upscaler, w, h, occlusion_mask_blur,occlusion_mask_flow_multiplier, occlusion_mask_difo_multiplier,occlusion_mask_difs_multiplier,occlusion_mask_trailing,blend_alpha, args):
     processing.fix_seed(p)
     processing_start_time = datetime.now()
     frames_preprocess, frames_postprocess,frames_mask, main_path, file_name = create_folders(mov_file,processing_start_time)
@@ -56,8 +57,12 @@ def process_m2m_animate(p, gen_dict,mov_file, movie_frames, max_frames, enable_h
 
     max_frames = int(max_frames)
 
-    state.job_count = max_frames  # * p.n_iter
+    if(shared.opts.data.get("m2m_animate_enable_mask", m2m_animate_enable_mask) == True):
+        state.job_count = max_frames * 2  # * p.n_iter
+    else:
+        state.job_count = max_frames
     generate_images = []
+    prev_frame_alpha_mask = None
     prev_img = None
     prev_gen_img = None
     mask = None
@@ -74,8 +79,12 @@ def process_m2m_animate(p, gen_dict,mov_file, movie_frames, max_frames, enable_h
     for i, image in enumerate(images):
         if i >= max_frames:
             break
-
-        state.job = f"{i + 1} out of {max_frames}"
+        
+        if(shared.opts.data.get("m2m_animate_enable_mask", m2m_animate_enable_mask) == True):
+            state.job = f"{i + 1} out of {(max_frames * 2)}"
+        else:
+            state.job = f"{i + 1} out of {max_frames}"
+        
         if state.skipped:
             state.skipped = False
 
@@ -84,38 +93,85 @@ def process_m2m_animate(p, gen_dict,mov_file, movie_frames, max_frames, enable_h
 
         img = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB), 'RGB')
 
-
-        if(i > 0):
-            print("\nGenerate Mask")
-            next_flow, prev_flow, occlusion_mask = RAFT_estimate_flow(prev_img,image)
-            occlusion_mask = np.clip(occlusion_mask * 0.1 * 255, 0, 255).astype(np.uint8)
-            alpha_mask, warped_frame_styled = compute_diff_map(next_flow, prev_flow, prev_img, image, prev_gen_img,occlusion_mask_blur, occlusion_mask_flow_multiplier,occlusion_mask_difo_multiplier, occlusion_mask_difs_multiplier)
-            alpha_mask = np.clip(alpha_mask, 0, 1)
-            occlusion_mask = np.clip(alpha_mask * 255, 0, 255).astype(np.uint8)
-            occlusion_mask = Image.fromarray(occlusion_mask)
-            alpha_mask = ImageOps.invert(img.split()[-1]).convert('L').point(lambda x: 255 if x > 0 else 0, mode='1')
-            mask = ImageChops.lighter(alpha_mask, occlusion_mask.convert('L')).convert('L')
-            if(shared.opts.data.get("m2m_animate_save_mask", m2m_animate_save_mask) == True):
-                save_image(mask,i,frames_mask,f"_mask_{i}")
-            p = create_processor(gen_dict,mask,seed_info)
-            
-        p.init_images = [img] * p.batch_size
+        if(shared.opts.data.get("m2m_animate_enable_mask", m2m_animate_enable_mask) == True):
+            if(i > 0):
+                init_img, mask,prev_frame_alpha_mask,alpha_mask,warped_styled_frame = generate_mask(i,img,prev_img,prev_gen_img,prev_frame_alpha_mask,occlusion_mask_blur,occlusion_mask_flow_multiplier,occlusion_mask_difo_multiplier,occlusion_mask_difs_multiplier,occlusion_mask_trailing,blend_alpha,frames_mask)
+                pmask = create_processor(gen_dict,mask,seed_info)
+                pmask.init_images = [init_img] * pmask.batch_size
+                procmask = scripts_m2m_animate.run(pmask, *args)
+                if procmask is None:
+                    print(f'current progress: {i + 1}/{(max_frames * 2)}')
+                    processed_mask = process_images(pmask)
+                    processed_frame = np.array(processed_mask.images[0])[...,:3]
+                    # normalizing the colors
+                    processed_frame = sdimages.resize_image(0, Image.fromarray(processed_frame), warped_styled_frame.shape[1], warped_styled_frame.shape[0], upscaler_name=hr_upscaler)
+                    processed_frame = skimage.exposure.match_histograms(np.array(processed_frame),np.array(img) , channel_axis=None)
+                    processed_frame = processed_frame.astype(float) * alpha_mask + warped_styled_frame.astype(float) * (1 - alpha_mask)
+                    processed_frame = np.clip(processed_frame, 0, 255).astype(np.uint8)
+                    init_img = Image.fromarray(processed_frame)
+                    if(shared.opts.data.get("m2m_animate_save_mask", m2m_animate_save_mask) == True):
+                        save_image(init_img,i,frames_mask,f"_mask_{i}")
+            else:
+                init_img = img
+        else:
+            init_img = img
+        
+        if(shared.opts.data.get("m2m_animate_enable_mask", m2m_animate_enable_mask) == True):
+            state.job = f"{i + 2} out of {(max_frames * 2)}"
+        print("\nGenerating Image")
+        p.init_images = [init_img] * p.batch_size
         proc = scripts_m2m_animate.run(p, *args)
         if proc is None:
-            print(f'current progress: {i + 1}/{max_frames}')
+            if(shared.opts.data.get("m2m_animate_enable_mask", m2m_animate_enable_mask) == True):
+                print(f'current progress: {i + 2}/{(max_frames * 2)}')
+            else:
+                print(f'current progress: {i + 1}/{max_frames}')
             processed = process_images(p)
             gen_image = processed.images[0]
-            prev_img = image.copy()
+            prev_img = init_img.copy()
             prev_gen_img = gen_image.copy()
-            if(enable_hr):
-                print("Scaling Image")
-                new_width = w * hr_scale
-                new_height = h * hr_scale
-                gen_image = sdimages.resize_image(0, gen_image, new_width, new_height, upscaler_name=hr_upscaler)
-            save_image(gen_image,i,frames_postprocess)
-            generate_images.append(gen_image)
+            if(i > 0):
+                if(enable_hr):
+                    print("\nScaling Image")
+                    new_width = int(w * hr_scale)
+                    new_height = int(h * hr_scale)
+                    gen_image = sdimages.resize_image(0, gen_image, new_width, new_height, upscaler_name=hr_upscaler)
+                save_image(gen_image,i,frames_postprocess)
+                generate_images.append(gen_image)
 
     video = save_video(generate_images, movie_frames,main_path,file_name)
+    settings_dict = {
+        "prompt":gen_dict["prompt"],
+        "negative_prompt":gen_dict["negative_prompt"],
+        "styles":gen_dict["prompt_styles"],
+        "sampler_name":gen_dict["sampler_name"],
+        "seed":seed_info["seed"],
+        "subseed":seed_info["subseed"],
+        "subseed_strength":seed_info["subseed_strength"],
+        "seed_resize_from_h":seed_info["seed_resize_from_h"],
+        "seed_resize_from_w":seed_info["seed_resize_from_w"],
+        "seed_enable_extras":seed_info["seed_enable_extras"],
+        "steps":gen_dict["steps"],
+        "cfg_scale":gen_dict["cfg_scale"],
+        "width":gen_dict["width"],
+        "height":gen_dict["height"],
+        "resize_mode":gen_dict["resize_mode"],
+        "denoising_strength":gen_dict["denoising_strength"],
+        "image_cfg_scale":gen_dict["image_cfg_scale"],
+        "noise_multiplier":gen_dict["noise_multiplier"],
+        "mask_blur":4,
+        "inpainting_fill":1,
+        "inpaint_full_res":False,
+        "inpaint_full_res_padding":32,
+        "inpainting_mask_invert":0,
+    }
+    if(enable_hr):      
+        new_width = int(w * hr_scale)
+        new_height = int(h * hr_scale)
+        settings_dict["new_width"] = new_width
+        settings_dict["new_height"] = new_height
+        settings_dict["hr_upscaler"] = hr_upscaler
+    save_settings(settings_dict,main_path)
     RAFT_clear_memory()
     return video
 
@@ -144,6 +200,8 @@ def animate(id_task: str,
             occlusion_mask_flow_multiplier,
             occlusion_mask_difo_multiplier,
             occlusion_mask_difs_multiplier,
+            occlusion_mask_trailing,
+            blend_alpha,
             *args):
     if not mov_file:
         raise Exception('Error！ Please add a video file!')
@@ -175,7 +233,7 @@ def animate(id_task: str,
     p = create_processor(gen_dict,None)
 
     print(f'\nStart parsing the number of mov frames')
-    generate_video = process_m2m_animate(p,gen_dict, mov_file, movie_frames, max_frames, enable_hr, hr_scale,hr_upscaler, width, height, occlusion_mask_blur,occlusion_mask_flow_multiplier,occlusion_mask_difo_multiplier,occlusion_mask_difs_multiplier, args)
+    generate_video = process_m2m_animate(p,gen_dict, mov_file, movie_frames, max_frames, enable_hr, hr_scale,hr_upscaler, width, height, occlusion_mask_blur,occlusion_mask_flow_multiplier,occlusion_mask_difo_multiplier,occlusion_mask_difs_multiplier,occlusion_mask_trailing,blend_alpha, args)
     processed = Processed(p, [], p.seed, "")
     
     p.close()

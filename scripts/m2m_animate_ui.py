@@ -45,14 +45,13 @@ from modules.ui_components import (
     FormGroup,
     InputAccordion,
 )
-from scripts import app_hook as patches
-from scripts import app_util
+from scripts import m2m_animate_hook as patches
+from scripts import m2m_animate_util
 from scripts import m2m_animate
 from scripts.m2m_animate import scripts_m2m_animate
-from scripts.app_config import m2m_animate_output_dir, m2m_animate_export_frames, m2m_animate_save_mask
+from scripts.m2m_animate_config import m2m_animate_output_dir, m2m_animate_export_frames, m2m_animate_save_mask,m2m_animate_enable_mask
 
 id_part = "m2m_animate"
-
 
 def save_video(video):
     path = "logs/movies"
@@ -155,6 +154,16 @@ class Toprow:
                     self.clear_prompt_button = ToolButton(
                         value=clear_prompt_symbol, elem_id=f"{id_part}_clear_prompt"
                     )
+                    self.load = ToolButton(
+                        value=restore_progress_symbol,
+                        elem_id=f"load_config",
+                        tooltip=f"Load the saved settings to save on setup time.",
+                    )
+                    self.save = ToolButton(
+                        "💾",
+                        elem_id=f"save_config",
+                        tooltip=f"Save the settings values on the page so on next load they are there.",
+                    )
                     self.restore_progress_button = ToolButton(
                         value=restore_progress_symbol,
                         elem_id=f"{id_part}_restore_progress",
@@ -184,6 +193,7 @@ class Toprow:
                         inputs=[self.prompt, self.negative_prompt],
                         outputs=[self.prompt, self.negative_prompt],
                     )
+                    
 
                 self.ui_styles = ui_prompt_styles.UiPromptStyles(
                     id_part, self.prompt, self.negative_prompt
@@ -314,9 +324,7 @@ def on_ui_tabs():
     scripts_m2m_animate.initialize_scripts(is_img2img=True)
 
     # with gr.Blocks(analytics_enabled=False) as m2m_animate_interface:
-    with gr.TabItem(
-        "m2m_animate", id=f"tab_{id_part}", elem_id=f"tab_{id_part}"
-    ) as m2m_animate_interface:
+    with gr.TabItem("M2M Animate", id=f"tab_{id_part}", elem_id=f"tab_{id_part}") as m2m_animate_interface:
         toprow = Toprow(is_img2img=False, id_part=id_part)
         dummy_component = gr.Label(visible=False)
         with gr.Tab(
@@ -366,7 +374,7 @@ def on_ui_tabs():
                                                 width = gr.Slider(
                                                     minimum=64,
                                                     maximum=2048,
-                                                    step=8,
+                                                    step=4,
                                                     label="Width",
                                                     value=512,
                                                     elem_id=f"{id_part}_width",
@@ -374,7 +382,7 @@ def on_ui_tabs():
                                                 height = gr.Slider(
                                                     minimum=64,
                                                     maximum=2048,
-                                                    step=8,
+                                                    step=4,
                                                     label="Height",
                                                     value=512,
                                                     elem_id=f"{id_part}_height",
@@ -428,17 +436,18 @@ def on_ui_tabs():
                                 value=30,
                             )
                             max_frames = gr.Number(
-                                label="Max FPS",
+                                label="Total Frames",
                                 value=-1,
                                 elem_id=f"{id_part}_max_frames",
+                                interactive=False
                             )
                         with gr.Accordion("Extra settings",open=False):
                             gr.HTML('# Occlusion mask params:')
                             with gr.Row():
                                 with gr.Column(scale=1, variant='compact'):
                                     occlusion_mask_blur = gr.Slider(label='Occlusion blur strength', minimum=0, maximum=10, step=0.1, value=3, interactive=True) 
-                                    #gr.HTML('')
-                                    #occlusion_mask_trailing = gr.Checkbox(label="Occlusion trailing", info="Reduce ghosting but adds more flickering to the video", value=True, interactive=True)
+                                    blend_alpha = gr.Slider(label='Warped prev frame vs Current frame blend alpha', minimum=0, maximum=1, step=0.1, value=1, interactive=True) 
+                                    occlusion_mask_trailing = gr.Checkbox(label="Occlusion trailing", info="Reduce ghosting but adds more flickering to the video", value=True, interactive=True)
                                 with gr.Column(scale=1, variant='compact'):
                                     occlusion_mask_flow_multiplier = gr.Slider(label='Occlusion flow multiplier', minimum=0, maximum=10, step=0.1, value=5, interactive=True) 
                                     occlusion_mask_difo_multiplier = gr.Slider(label='Occlusion diff origin multiplier', minimum=0, maximum=10, step=0.1, value=2, interactive=True)
@@ -507,6 +516,12 @@ def on_ui_tabs():
                 outputs=[width, height],
             )
 
+            init_mov.change(
+                fn=calc_video_frames,
+                inputs=[init_mov, movie_frames, max_frames],
+                outputs=[movie_frames, max_frames],
+            )
+
             hr_resolution_preview_inputs = [enable_hr, width, height, hr_scale]
 
             for component in hr_resolution_preview_inputs:
@@ -546,7 +561,9 @@ def on_ui_tabs():
                     occlusion_mask_blur,
                     occlusion_mask_flow_multiplier,
                     occlusion_mask_difo_multiplier,
-                    occlusion_mask_difs_multiplier
+                    occlusion_mask_difs_multiplier,
+                    occlusion_mask_trailing,
+                    blend_alpha
                 ]
                 + custom_inputs,
                 outputs=[
@@ -558,17 +575,75 @@ def on_ui_tabs():
                 show_progress=False,
             )
 
+            load_settings_args = dict(
+                fn=m2m_animate_util.load_settings,
+                inputs=[
+                    toprow.prompt,
+                    toprow.negative_prompt,
+                    height,
+                    width,
+                    steps,
+                    sampler_name,
+                    cfg_scale,
+                    denoising_strength,
+                    noise_multiplier,
+                    enable_hr,
+                    hr_scale,
+                    hr_upscaler
+                ],
+                outputs=[
+                    toprow.prompt,
+                    toprow.negative_prompt,
+                    height,
+                    width,
+                    steps,
+                    sampler_name,
+                    cfg_scale,
+                    denoising_strength,
+                    noise_multiplier,
+                    enable_hr,
+                    hr_scale,
+                    hr_upscaler
+                ],
+                show_progress=True,
+            )
+
+            save_settings_args = dict(
+                fn=m2m_animate_util.save_settings,
+                inputs=[
+                    toprow.prompt,
+                    toprow.negative_prompt,
+                    height,
+                    width,
+                    steps,
+                    sampler_name,
+                    cfg_scale,
+                    denoising_strength,
+                    noise_multiplier,
+                    enable_hr,
+                    hr_scale,
+                    hr_upscaler
+                ],
+                show_progress=True,
+            )
+
             toprow.submit.click(**m2m_animate_args)
+            toprow.save.click(**save_settings_args)
+            toprow.load.click(**load_settings_args)
 
     return [(m2m_animate_interface, "M2M Animate", f"{id_part}_tabs")]
-
 
 def calc_video_w_h(video, width, height):
     if not video:
         return width, height
 
-    return app_util.calc_video_w_h(video)
+    return m2m_animate_util.calc_video_w_h(video)
 
+def calc_video_frames(video, movie_frames, max_frames):
+    if not video:
+        return movie_frames, max_frames
+
+    return m2m_animate_util.calc_video_frames(video)
 
 def on_ui_settings():
     section = ("scripts_m2m_animate", "M2M Animate")
@@ -584,6 +659,13 @@ def on_ui_settings():
             m2m_animate_export_frames, "Save orginal frames of video in a folder",gr.Checkbox,{"interactive": True}, section=section
         ),
     )
+    shared.opts.add_option(
+        "m2m_animate_enable_mask",
+        shared.OptionInfo(
+            m2m_animate_enable_mask, "Use Masking to better enhance the video generation",gr.Checkbox,{"interactive": True}, section=section
+        ),
+    )
+    
     shared.opts.add_option(
         "m2m_animate_save_mask",
         shared.OptionInfo(
