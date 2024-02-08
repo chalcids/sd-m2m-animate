@@ -53,7 +53,6 @@ from scripts.m2m_animate_config import m2m_animate_output_dir, m2m_animate_expor
 
 id_part = "m2m_animate"
 
-
 def save_video(video):
     path = "logs/movies"
     if not os.path.exists(path):
@@ -155,6 +154,16 @@ class Toprow:
                     self.clear_prompt_button = ToolButton(
                         value=clear_prompt_symbol, elem_id=f"{id_part}_clear_prompt"
                     )
+                    self.load = ToolButton(
+                        value=restore_progress_symbol,
+                        elem_id=f"load_config",
+                        tooltip=f"Load the saved settings to save on setup time.",
+                    )
+                    self.save = ToolButton(
+                        "💾",
+                        elem_id=f"save_config",
+                        tooltip=f"Save the settings values on the page so on next load they are there.",
+                    )
                     self.restore_progress_button = ToolButton(
                         value=restore_progress_symbol,
                         elem_id=f"{id_part}_restore_progress",
@@ -184,6 +193,7 @@ class Toprow:
                         inputs=[self.prompt, self.negative_prompt],
                         outputs=[self.prompt, self.negative_prompt],
                     )
+                    
 
                 self.ui_styles = ui_prompt_styles.UiPromptStyles(
                     id_part, self.prompt, self.negative_prompt
@@ -314,9 +324,7 @@ def on_ui_tabs():
     scripts_m2m_animate.initialize_scripts(is_img2img=True)
 
     # with gr.Blocks(analytics_enabled=False) as m2m_animate_interface:
-    with gr.TabItem(
-        "M2M Animate", id=f"tab_{id_part}", elem_id=f"tab_{id_part}"
-    ) as m2m_animate_interface:
+    with gr.TabItem("M2M Animate", id=f"tab_{id_part}", elem_id=f"tab_{id_part}") as m2m_animate_interface:
         toprow = Toprow(is_img2img=False, id_part=id_part)
         dummy_component = gr.Label(visible=False)
         with gr.Tab(
@@ -366,7 +374,7 @@ def on_ui_tabs():
                                                 width = gr.Slider(
                                                     minimum=64,
                                                     maximum=2048,
-                                                    step=8,
+                                                    step=4,
                                                     label="Width",
                                                     value=512,
                                                     elem_id=f"{id_part}_width",
@@ -374,7 +382,7 @@ def on_ui_tabs():
                                                 height = gr.Slider(
                                                     minimum=64,
                                                     maximum=2048,
-                                                    step=8,
+                                                    step=4,
                                                     label="Height",
                                                     value=512,
                                                     elem_id=f"{id_part}_height",
@@ -567,10 +575,63 @@ def on_ui_tabs():
                 show_progress=False,
             )
 
+            load_settings_args = dict(
+                fn=m2m_animate_util.load_settings,
+                inputs=[
+                    toprow.prompt,
+                    toprow.negative_prompt,
+                    height,
+                    width,
+                    steps,
+                    sampler_name,
+                    cfg_scale,
+                    denoising_strength,
+                    noise_multiplier,
+                    enable_hr,
+                    hr_scale,
+                    hr_upscaler
+                ],
+                outputs=[
+                    toprow.prompt,
+                    toprow.negative_prompt,
+                    height,
+                    width,
+                    steps,
+                    sampler_name,
+                    cfg_scale,
+                    denoising_strength,
+                    noise_multiplier,
+                    enable_hr,
+                    hr_scale,
+                    hr_upscaler
+                ],
+                show_progress=True,
+            )
+
+            save_settings_args = dict(
+                fn=m2m_animate_util.save_settings,
+                inputs=[
+                    toprow.prompt,
+                    toprow.negative_prompt,
+                    height,
+                    width,
+                    steps,
+                    sampler_name,
+                    cfg_scale,
+                    denoising_strength,
+                    noise_multiplier,
+                    enable_hr,
+                    hr_scale,
+                    hr_upscaler
+                ],
+                show_progress=True,
+            )
+
             toprow.submit.click(**m2m_animate_args)
+            toprow.save.click(**save_settings_args)
+            toprow.load.click(**load_settings_args)
 
     return [(m2m_animate_interface, "M2M Animate", f"{id_part}_tabs")]
-
 
 def calc_video_w_h(video, width, height):
     if not video:
@@ -583,7 +644,6 @@ def calc_video_frames(video, movie_frames, max_frames):
         return movie_frames, max_frames
 
     return m2m_animate_util.calc_video_frames(video)
-
 
 def on_ui_settings():
     section = ("scripts_m2m_animate", "M2M Animate")

@@ -1,0 +1,6 @@
+{
+    "width":900,
+    "height":1600,
+    "steps":100,
+    "sampler_name":"DDIM"
+}

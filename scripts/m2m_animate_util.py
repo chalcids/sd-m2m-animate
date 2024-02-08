@@ -9,6 +9,7 @@ from tqdm import tqdm
 
 from modules import shared
 from modules.shared import state
+from modules.paths_internal import extensions_dir
 from scripts.m2m_animate_config import m2m_animate_output_dir, m2m_animate_export_frames,m2m_animate_save_mask
 
 
@@ -187,3 +188,40 @@ def save_settings(dict,path):
     # Convert and write JSON object to file
     with open(f"{path}/settings.json", "w") as outfile: 
         json.dump(dict, outfile)
+
+def save_settings(prompt,neg_prompt,height,width,steps,sampler_name,cfg_scale,denoising_strength,noise_multiplier,enable_hr,hr_scale,hr_upscaler):
+    #print(f"{extensions_dir}\sd-m2m-animate\config.json")
+    settings_dict = {
+        "prompt":prompt,
+        "neg_prompt":neg_prompt,
+        "width":width,
+        "height":height,
+        "steps":steps,
+        "sampler_name":sampler_name,
+        "cfg_scale":cfg_scale,
+        "denoising_strength":denoising_strength,
+        "noise_multiplier":noise_multiplier,
+        "enable_hr":enable_hr,
+        "hr_scale":hr_scale,
+        "hr_upscaler":hr_upscaler
+    }
+    with open(f"{extensions_dir}\sd-m2m-animate\config.json", "w") as outfile: 
+        json.dump(settings_dict, outfile)
+
+def load_settings(prompt,neg_prompt,height,width,steps,sampler_name,cfg_scale,denoising_strength,noise_multiplier,enable_hr,hr_scale,hr_upscaler):
+    #print(f"{extensions_dir}\sd-m2m-animate\config.json")
+    with open(f"{extensions_dir}\sd-m2m-animate\config.json") as outfile: 
+        settings = json.loads(outfile.read())
+        prompt = settings['prompt']
+        neg_prompt = settings['neg_prompt']
+        width = settings['width']
+        height = settings['height']
+        steps = settings['steps']
+        sampler_name = settings['sampler_name']
+        cfg_scale = settings['cfg_scale']
+        denoising_strength = settings['denoising_strength']
+        noise_multiplier = settings['noise_multiplier']
+        enable_hr = settings['enable_hr']
+        hr_scale = settings['hr_scale']
+        hr_upscaler = settings['hr_upscaler']
+    return prompt,neg_prompt,height, width, steps,sampler_name,cfg_scale,denoising_strength,noise_multiplier,enable_hr,hr_scale,hr_upscaler
