@@ -17,7 +17,7 @@ from modules.shared import opts, state
 from modules.ui import plaintext_to_html
 import modules.scripts as scripts
 
-from scripts.m2m_animate_util import create_folders, get_mov_all_images, images_to_video, save_images, save_image, save_settings
+from scripts.m2m_animate_util import create_folders, get_mov_all_images, images_to_video, save_images, save_image, save_video_settings
 from scripts.m2m_animate_config import m2m_animate_output_dir, m2m_animate_export_frames,m2m_animate_save_mask,m2m_animate_enable_mask
 from scripts.raft_utils import RAFT_clear_memory,generate_mask
 
@@ -171,7 +171,7 @@ def process_m2m_animate(p, gen_dict,mov_file, movie_frames, max_frames, enable_h
         settings_dict["new_width"] = new_width
         settings_dict["new_height"] = new_height
         settings_dict["hr_upscaler"] = hr_upscaler
-    save_settings(settings_dict,main_path)
+    save_video_settings(settings_dict,main_path)
     RAFT_clear_memory()
     return video
 

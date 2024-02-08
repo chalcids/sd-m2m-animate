@@ -184,7 +184,7 @@ def save_image(image,i,path,extra=""):
     image.save(f"{path}/frame{extra}_{i}.png")
     return
 
-def save_settings(dict,path):
+def save_video_settings(dict,path):
     # Convert and write JSON object to file
     with open(f"{path}/settings.json", "w") as outfile: 
         json.dump(dict, outfile)
