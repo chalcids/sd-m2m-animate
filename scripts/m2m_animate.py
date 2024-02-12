@@ -1,5 +1,7 @@
 import os.path
 import time
+import torch
+
 
 from datetime import datetime
 from tqdm import tqdm
@@ -131,7 +133,7 @@ def process_m2m_animate(p, gen_dict,mov_file, movie_frames, max_frames, enable_h
             prev_img = init_img.copy()
             prev_gen_img = gen_image.copy()
             if(i > 0):
-                if(enable_hr):
+                if(enable_hr and not state.interrupted):
                     print("\nScaling Image")
                     new_width = int(w * hr_scale)
                     new_height = int(h * hr_scale)
@@ -173,6 +175,11 @@ def process_m2m_animate(p, gen_dict,mov_file, movie_frames, max_frames, enable_h
         settings_dict["hr_upscaler"] = hr_upscaler
     save_video_settings(settings_dict,main_path)
     RAFT_clear_memory()
+    torch.cuda.empty_cache()
+    # Only use following if not working with multiple processes sharing GPU mem
+    # Ensures that all unneeded IPC handles are released and that GPU memory is being used efficiently
+    torch.cuda.ipc_collect()
+    print("GPU cache has been cleared.")
     return video
 
 def animate(id_task: str,
