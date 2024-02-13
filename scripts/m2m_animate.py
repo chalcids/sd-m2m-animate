@@ -133,7 +133,7 @@ def process_m2m_animate(p, gen_dict,mov_file, movie_frames, max_frames, enable_h
             prev_img = init_img.copy()
             prev_gen_img = gen_image.copy()
             if(i > 0):
-                if(enable_hr and not state.interrupted):
+                if(enable_hr):
                     print("\nScaling Image")
                     new_width = int(w * hr_scale)
                     new_height = int(h * hr_scale)
