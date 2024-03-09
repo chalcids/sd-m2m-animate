@@ -189,7 +189,7 @@ def save_video_settings(dict,path):
     with open(f"{path}/settings.json", "w") as outfile: 
         json.dump(dict, outfile)
 
-def save_settings(prompt,neg_prompt,height,width,steps,sampler_name,cfg_scale,denoising_strength,noise_multiplier,enable_hr,hr_scale,hr_upscaler):
+def save_settings(prompt,neg_prompt,height,width,steps,sampler_name,cfg_scale,denoising_strength,noise_multiplier,enable_hr,hr_scale,hr_upscaler,seed,subseed):
     #print(f"{extensions_dir}\sd-m2m-animate\config.json")
     settings_dict = {
         "prompt":prompt,
@@ -203,12 +203,14 @@ def save_settings(prompt,neg_prompt,height,width,steps,sampler_name,cfg_scale,de
         "noise_multiplier":noise_multiplier,
         "enable_hr":enable_hr,
         "hr_scale":hr_scale,
-        "hr_upscaler":hr_upscaler
+        "hr_upscaler":hr_upscaler,
+        "seed":seed,
+        "subseed":subseed
     }
     with open(f"{extensions_dir}\sd-m2m-animate\config.json", "w") as outfile: 
         json.dump(settings_dict, outfile)
 
-def load_settings(prompt,neg_prompt,height,width,steps,sampler_name,cfg_scale,denoising_strength,noise_multiplier,enable_hr,hr_scale,hr_upscaler):
+def load_settings(prompt,neg_prompt,height,width,steps,sampler_name,cfg_scale,denoising_strength,noise_multiplier,enable_hr,hr_scale,hr_upscaler,seed,subseed):
     #print(f"{extensions_dir}\sd-m2m-animate\config.json")
     with open(f"{extensions_dir}\sd-m2m-animate\config.json") as outfile: 
         settings = json.loads(outfile.read())
@@ -224,4 +226,21 @@ def load_settings(prompt,neg_prompt,height,width,steps,sampler_name,cfg_scale,de
         enable_hr = settings['enable_hr']
         hr_scale = settings['hr_scale']
         hr_upscaler = settings['hr_upscaler']
-    return prompt,neg_prompt,height, width, steps,sampler_name,cfg_scale,denoising_strength,noise_multiplier,enable_hr,hr_scale,hr_upscaler
+        seed = settings['seed']
+        subseed = settings['subseed']
+    return prompt,neg_prompt,height, width, steps,sampler_name,cfg_scale,denoising_strength,noise_multiplier,enable_hr,hr_scale,hr_upscaler,seed,subseed
+
+def save_seed_settings(seed,subseed):
+    with open(f"{extensions_dir}\sd-m2m-animate\config.json") as infile: 
+        settings = json.loads(infile.read())
+        settings['seed'] = seed
+        settings['subseed'] = subseed
+    with open(f"{extensions_dir}\sd-m2m-animate\config.json", "w") as outfile: 
+        json.dump(settings, outfile)
+    return
+
+def load_prev_seed(type,element):
+    with open(f"{extensions_dir}\sd-m2m-animate\config.json") as infile: 
+        settings = json.loads(infile.read())
+        element = settings[type]
+    return element

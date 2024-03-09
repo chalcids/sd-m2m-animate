@@ -31,6 +31,8 @@ from modules.ui import (
     paste_symbol,
     clear_prompt_symbol,
     restore_progress_symbol,
+    random_symbol,
+    reuse_symbol
 )
 from modules.ui_common import (
     folder_symbol,
@@ -49,7 +51,7 @@ from scripts import m2m_animate_hook as patches
 from scripts import m2m_animate_util
 from scripts import m2m_animate
 from scripts.m2m_animate import scripts_m2m_animate
-from scripts.m2m_animate_config import m2m_animate_output_dir, m2m_animate_export_frames, m2m_animate_save_mask,m2m_animate_enable_mask
+from scripts.m2m_animate_config import m2m_animate_output_dir, m2m_animate_export_frames, m2m_animate_save_mask,m2m_animate_enable_mask,m2m_animate_test_frames
 
 id_part = "m2m_animate"
 
@@ -94,7 +96,14 @@ class Toprow:
                                 type="binary",
                                 visible=False,
                             )
-
+                            self.token_counter = gr.HTML(
+                                value="<span>0/75</span>",
+                                elem_id=f"{id_part}_token_counter",
+                                elem_classes=["token-counter"],
+                            )
+                            self.token_button = gr.Button(
+                                visible=False, elem_id=f"{id_part}_token_button"
+                            )
                 with gr.Row():
                     with gr.Column(scale=80):
                         with gr.Row():
@@ -105,6 +114,14 @@ class Toprow:
                                 lines=3,
                                 placeholder="Negative prompt (press Ctrl+Enter or Alt+Enter to generate)",
                                 elem_classes=["prompt"],
+                            )
+                            self.negative_token_counter = gr.HTML(
+                                value="<span>0/75</span>",
+                                elem_id=f"{id_part}_negative_token_counter",
+                                elem_classes=["token-counter"],
+                            )
+                            self.negative_token_button = gr.Button(
+                                visible=False, elem_id=f"{id_part}_negative_token_button"
                             )
 
             self.button_interrogate = None
@@ -119,34 +136,37 @@ class Toprow:
                     )
 
             with gr.Column(scale=1, elem_id=f"{id_part}_actions_column"):
-                with gr.Row(
-                    elem_id=f"{id_part}_generate_box", elem_classes="generate-box"
-                ):
-                    self.interrupt = gr.Button(
-                        "Interrupt",
-                        elem_id=f"{id_part}_interrupt",
-                        elem_classes="generate-box-interrupt",
-                    )
-                    self.skip = gr.Button(
-                        "Skip",
-                        elem_id=f"{id_part}_skip",
-                        elem_classes="generate-box-skip",
-                    )
-                    self.submit = gr.Button(
-                        "Generate", elem_id=f"{id_part}_generate", variant="primary"
-                    )
+                with gr.Row(elem_id=f"{id_part}_generate_box", elem_classes="generate-box mb-1"):
+                    with gr.Row():
+                        self.interruptMain = gr.Button(
+                            "Interrupt",
+                            elem_id=f"{id_part}_main_interrupt",
+                            elem_classes="generate-box-interrupt",
+                        )
+                        self.submit = gr.Button(
+                            "Generate Video", elem_id=f"{id_part}_main_generate", variant="primary"
+                        )
 
-                    self.skip.click(
-                        fn=lambda: shared.state.skip(),
-                        inputs=[],
-                        outputs=[],
-                    )
+                        self.interruptMain.click(
+                            fn=lambda: shared.state.interrupt(),
+                            inputs=[],
+                            outputs=[],
+                        )
+                    with gr.Row():
+                        self.interruptTest = gr.Button(
+                            "Interrupt",
+                            elem_id=f"{id_part}_test_interrupt",
+                            elem_classes="generate-box-interrupt",
+                        )
+                        self.submitTest = gr.Button(
+                            "Generate Test Frames", elem_id=f"{id_part}_test_generate", variant="primary"
+                        )
 
-                    self.interrupt.click(
-                        fn=lambda: shared.state.interrupt(),
-                        inputs=[],
-                        outputs=[],
-                    )
+                        self.interruptTest.click(
+                            fn=lambda: shared.state.interrupt(),
+                            inputs=[],
+                            outputs=[],
+                        )
 
                 with gr.Row(elem_id=f"{id_part}_tools"):
                     self.paste = ToolButton(value=paste_symbol, elem_id="paste")
@@ -168,23 +188,6 @@ class Toprow:
                         value=restore_progress_symbol,
                         elem_id=f"{id_part}_restore_progress",
                         visible=False,
-                    )
-
-                    self.token_counter = gr.HTML(
-                        value="<span>0/75</span>",
-                        elem_id=f"{id_part}_token_counter",
-                        elem_classes=["token-counter"],
-                    )
-                    self.token_button = gr.Button(
-                        visible=False, elem_id=f"{id_part}_token_button"
-                    )
-                    self.negative_token_counter = gr.HTML(
-                        value="<span>0/75</span>",
-                        elem_id=f"{id_part}_negative_token_counter",
-                        elem_classes=["token-counter"],
-                    )
-                    self.negative_token_button = gr.Button(
-                        visible=False, elem_id=f"{id_part}_negative_token_button"
                     )
 
                     self.clear_prompt_button.click(
@@ -323,8 +326,7 @@ Requested path was: {f}
 def on_ui_tabs():
     scripts_m2m_animate.initialize_scripts(is_img2img=True)
 
-    # with gr.Blocks(analytics_enabled=False) as m2m_animate_interface:
-    with gr.TabItem("M2M Animate", id=f"tab_{id_part}", elem_id=f"tab_{id_part}") as m2m_animate_interface:
+    with gr.Blocks(analytics_enabled=False) as m2m_animate_interface:
         toprow = Toprow(is_img2img=False, id_part=id_part)
         dummy_component = gr.Label(visible=False)
         with gr.Tab(
@@ -489,8 +491,26 @@ def on_ui_tabs():
                     elif category == "scripts":
                         with FormGroup(elem_id=f"{id_part}_script_container"):
                             custom_inputs = scripts_m2m_animate.setup_ui()
+                    
+                    elif category == "seed":
+                        with FormRow(elem_id=f"{id_part}_seed_settings") as row:
+                            with gr.Row(elem_id=f"{id_part}_seed_row"):
+                                seed = gr.Number(label='Seed', value=-1, elem_id=f"{id_part}_seed", min_width=100, precision=0)
+                                random_seed = ToolButton(random_symbol, elem_id=f"{id_part}_random_seed", tooltip="Set seed to -1, which will cause a new random number to be used every time")
+                                reuse_seed = ToolButton(reuse_symbol, elem_id=f"{id_part}_reuse_seed", tooltip="Reuse seed from last generation, mostly useful if it was randomized")
+                            with gr.Row(elem_id=f"{id_part}_subseed_row"):
+                                subseed = gr.Number(label='Variation seed', value=-1, elem_id=f"{id_part}_subseed", precision=0)
+                                random_subseed = ToolButton(random_symbol, elem_id=f"{id_part}_random_subseed")
+                                reuse_subseed = ToolButton(reuse_symbol, elem_id=f"{id_part}_reuse_subseed")
 
-                    if category not in {"accordions"}:
+                            random_seed.click(fn=None, _js="function(){setRandomSeed('" + f"{id_part}_seed" + "')}", show_progress=False, inputs=[], outputs=[])
+                            random_subseed.click(fn=None, _js="function(){setRandomSeed('" + f"{id_part}_subseed" + "')}", show_progress=False, inputs=[], outputs=[])
+
+                            reuse_seed.click(fn=load_prev_seed, show_progress=True,inputs=[seed], outputs=[seed])
+                            reuse_subseed.click(fn=load_prev_subseed, show_progress=True,inputs=[subseed], outputs=[subseed])
+
+                    if category not in {"accordions","seed"}:
+
                         scripts_m2m_animate.setup_ui_for_section(category)
 
             (
@@ -535,8 +555,7 @@ def on_ui_tabs():
                 )
 
             m2m_animate_args = dict(
-                fn=wrap_gradio_gpu_call(m2m_animate.animate, extra_outputs=[None, "", ""]),
-                _js="submit_m2m_animate",
+                fn=m2m_animate.animate,
                 inputs=[
                     dummy_component,
                     toprow.prompt,
@@ -589,7 +608,9 @@ def on_ui_tabs():
                     noise_multiplier,
                     enable_hr,
                     hr_scale,
-                    hr_upscaler
+                    hr_upscaler,
+                    seed,
+                    subseed
                 ],
                 outputs=[
                     toprow.prompt,
@@ -603,7 +624,9 @@ def on_ui_tabs():
                     noise_multiplier,
                     enable_hr,
                     hr_scale,
-                    hr_upscaler
+                    hr_upscaler,
+                    seed,
+                    subseed
                 ],
                 show_progress=True,
             )
@@ -622,7 +645,9 @@ def on_ui_tabs():
                     noise_multiplier,
                     enable_hr,
                     hr_scale,
-                    hr_upscaler
+                    hr_upscaler,
+                    seed,
+                    subseed
                 ],
                 show_progress=True,
             )
@@ -672,6 +697,12 @@ def on_ui_settings():
             m2m_animate_save_mask, "Save generated masks in a folder",gr.Checkbox,{"interactive": True}, section=section
         ),
     )
+    shared.opts.add_option(
+        "m2m_animate_test_frames",
+        shared.OptionInfo(
+            m2m_animate_test_frames, "Save generated masks in a folder",gr.Number,{"interactive": True}, section=section
+        ),
+    )
     
 
 
@@ -685,28 +716,13 @@ def calc_resolution_hires(enable_hr, width, height, hr_scale ):
     p.calculate_target_resolution()
     return f"<span style='float: right;'>from <span class='resolution'>{p.width}x{p.height}</span> to <span class='resolution'>{p.hr_resize_x or p.hr_upscale_to_x}x{p.hr_resize_y or p.hr_upscale_to_y}</span></span>"
 
+def load_prev_seed(seed):
+    seed = m2m_animate_util.load_prev_seed("seed",seed)
+    return seed
 
-def block_context_init(self, *args, **kwargs):
-    origin_block_context_init(self, *args, **kwargs)
+def load_prev_subseed(subseed):
+    subseed = m2m_animate_util.load_prev_seed("subseed",subseed)
+    return subseed
 
-    if self.elem_id == "tab_img2img":
-        self.parent.__enter__()
-        on_ui_tabs()
-        self.parent.__exit__()
-
-
-def on_app_reload():
-    global origin_block_context_init
-    if origin_block_context_init:
-        patches.undo(__name__, obj=gr.blocks.BlockContext, field="__init__")
-        origin_block_context_init = None
-
-
-origin_block_context_init = patches.patch(
-    __name__,
-    obj=gr.blocks.BlockContext,
-    field="__init__",
-    replacement=block_context_init,
-)
-script_callbacks.on_before_reload(on_app_reload)
+script_callbacks.on_ui_tabs(on_ui_tabs)
 script_callbacks.on_ui_settings(on_ui_settings)

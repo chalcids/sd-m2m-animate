@@ -2,5 +2,7 @@
     "width":900,
     "height":1600,
     "steps":100,
-    "sampler_name":"DDIM"
+    "sampler_name":"DDIM",
+    "seed": 33561368,
+    "subseed": 942499821
 }

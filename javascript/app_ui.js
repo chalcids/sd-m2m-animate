@@ -46,3 +46,12 @@ function switchModnetMode() {
 function copy_from(type) {
     return []
 }
+
+function setRandomSeed(elem_id) {
+    var input = gradioApp().querySelector("#" + elem_id + " input");
+    if (!input) return [];
+
+    input.value = "-1";
+    updateInput(input);
+    return [];
+}
