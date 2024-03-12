@@ -1,11 +1,11 @@
 function submit_m2m_animate() {
     rememberGallerySelection('m2m_animate_gallery')
-    showSubmitButtons('m2m_animate', false)
+    showSubmitButtons('m2manimate', false)
     showResultVideo('m2m_animate', false)
 
     var id = randomId()
     requestProgress(id, gradioApp().getElementById('m2m_animate_gallery_container'), gradioApp().getElementById('m2m_animate_gallery'), function () {
-        showSubmitButtons('m2m_animate', true)
+        showSubmitButtons('m2manimate', true)
         showResultVideo('m2m_animate', true)
     })
 
@@ -45,6 +45,24 @@ function switchModnetMode() {
 
 function copy_from(type) {
     return []
+}
+
+function submitTestFrame() {
+    showSubmitButtons('m2mtestframe', false);
+    showResultVideo('m2m_animate', false)
+    var id = randomId();
+    localSet("m2m_animate_test_task_id", id);
+
+    requestProgress(id, gradioApp().getElementById('m2m_animate_gallery_container'), gradioApp().getElementById('m2m_animate_gallery'), function() {
+        showSubmitButtons('m2mtestframe', true);
+        localRemove("m2m_animate_test_task_id");
+    });
+
+    var res = create_submit_args(arguments);
+
+    res[0] = id;
+
+    return res;
 }
 
 function setRandomSeed(elem_id) {

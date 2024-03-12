@@ -1,6 +1,7 @@
 import os.path
 import time
 import torch
+import random
 
 
 from datetime import datetime
@@ -19,8 +20,8 @@ from modules.shared import opts, state
 from modules.ui import plaintext_to_html
 import modules.scripts as scripts
 
-from scripts.m2m_animate_util import create_folders, get_mov_all_images, images_to_video, save_images, save_image, save_video_settings
-from scripts.m2m_animate_config import m2m_animate_output_dir, m2m_animate_export_frames,m2m_animate_save_mask,m2m_animate_enable_mask
+from scripts.m2m_animate_util import create_folders,get_mov_frame_count, get_mov_all_images, images_to_video, save_images, save_image, save_video_settings, getMovTestFrames
+from scripts.m2m_animate_config import m2m_animate_output_dir, m2m_animate_export_frames,m2m_animate_save_mask,m2m_animate_enable_mask, m2m_animate_test_frames
 from scripts.raft_utils import RAFT_clear_memory,generate_mask
 
 
@@ -70,6 +71,7 @@ def process_m2m_animate(p, gen_dict,mov_file, movie_frames, max_frames, enable_h
     mask = None
     
     print(f"Seed:{p.seed}")
+    print(f"Subseed:{p.subseed}")
     seed_info = {
         "seed": p.seed,
         "subseed":p.subseed,
@@ -209,6 +211,8 @@ def animate(id_task: str,
             occlusion_mask_difs_multiplier,
             occlusion_mask_trailing,
             blend_alpha,
+            seedGen,
+            subseedGen,
             *args):
     if not mov_file:
         raise Exception('Error！ Please add a video file!')
@@ -236,8 +240,11 @@ def animate(id_task: str,
         "override_settings":override_settings,
         "args":args
     }
-
-    p = create_processor(gen_dict,None)
+    seed_info = {
+        "seed": seedGen,
+        "subseed":subseedGen
+    }
+    p = create_processor(gen_dict,None,seed_info)
 
     print(f'\nStart parsing the number of mov frames')
     generate_video = process_m2m_animate(p,gen_dict, mov_file, movie_frames, max_frames, enable_hr, hr_scale,hr_upscaler, width, height, occlusion_mask_blur,occlusion_mask_flow_multiplier,occlusion_mask_difo_multiplier,occlusion_mask_difs_multiplier,occlusion_mask_trailing,blend_alpha, args)
@@ -258,42 +265,7 @@ def animate(id_task: str,
         processed.comments, classname="comments")
 
 def create_processor(gen_dict,mask,seed_info=None):
-    if(seed_info):
-        p = StableDiffusionProcessingImg2Img(
-            sd_model=shared.sd_model,
-            do_not_save_samples=True,
-            do_not_save_grid=True,
-            prompt=gen_dict["prompt"],
-            negative_prompt=gen_dict["negative_prompt"],
-            styles=gen_dict["prompt_styles"],
-            sampler_name=gen_dict["sampler_name"],
-            batch_size=1,
-            n_iter=1,
-            steps=gen_dict["steps"],
-            cfg_scale=gen_dict["cfg_scale"],
-            width=gen_dict["width"],
-            height=gen_dict["height"],
-            init_images=[None],
-            mask=mask,
-            seed=seed_info["seed"],
-            subseed=seed_info["subseed"],
-            subseed_strength=seed_info["subseed_strength"],
-            seed_resize_from_h=seed_info["seed_resize_from_h"],
-            seed_resize_from_w=seed_info["seed_resize_from_w"],
-            seed_enable_extras=seed_info["seed_enable_extras"],
-            mask_blur=gen_dict["mask_blur"],
-            inpainting_fill=gen_dict["inpainting_fill"],
-            resize_mode=gen_dict["resize_mode"],
-            denoising_strength=gen_dict["denoising_strength"],
-            image_cfg_scale=gen_dict["image_cfg_scale"],
-            inpaint_full_res=gen_dict["inpaint_full_res"],
-            inpaint_full_res_padding=gen_dict["inpaint_full_res_padding"],
-            inpainting_mask_invert=gen_dict["inpainting_mask_invert"],
-            override_settings=gen_dict["override_settings"],
-            initial_noise_multiplier=gen_dict["noise_multiplier"]
-        )
-    else:
-        p = StableDiffusionProcessingImg2Img(
+    p = StableDiffusionProcessingImg2Img(
             sd_model=shared.sd_model,
             do_not_save_samples=True,
             do_not_save_grid=True,
@@ -320,9 +292,109 @@ def create_processor(gen_dict,mask,seed_info=None):
             inpainting_mask_invert=gen_dict["inpainting_mask_invert"],
             override_settings=gen_dict["override_settings"],
             initial_noise_multiplier=gen_dict["noise_multiplier"]
-        )
+        )    
     p.scripts = scripts_m2m_animate
     p.script_args = gen_dict["args"]
 
     p.extra_generation_params["Mask blur"] = gen_dict["mask_blur"]
+    if(seed_info):
+        p.seed = seed_info["seed"]
+        p.seed_checkbox = True
+        p.subseed_strength = seed_info["subseed"]
     return p
+
+def test_frames(id_task: str,
+            prompt,
+            negative_prompt,
+            prompt_styles,
+            mov_file,
+            steps,
+            sampler_name,
+            cfg_scale,
+            image_cfg_scale,
+            denoising_strength,
+            height,
+            width,
+            resize_mode,
+            override_settings_texts,
+            noise_multiplier,
+            enable_hr,
+            hr_scale,
+            hr_upscaler,
+            seed,
+            subseed,
+            *args):
+    print(id_task)
+    if not mov_file:
+        raise Exception('Error Please add a video file!')
+    override_settings = create_override_settings_dict(override_settings_texts)
+    assert 0. <= denoising_strength <= 1., 'can only work with strength in [0.0, 1.0]'
+    gen_dict = {
+        "prompt":prompt,
+        "negative_prompt":negative_prompt,
+        "prompt_styles":prompt_styles,
+        "sampler_name":sampler_name,
+        "steps":steps,
+        "cfg_scale":cfg_scale,
+        "width":width,
+        "height":height,
+        "resize_mode":resize_mode,
+        "denoising_strength":denoising_strength,
+        "image_cfg_scale":image_cfg_scale,
+        "noise_multiplier":noise_multiplier,
+        "mask_blur":4,
+        "inpainting_fill":1,
+        "inpaint_full_res":False,
+        "inpaint_full_res_padding":32,
+        "inpainting_mask_invert":0,
+        "override_settings":override_settings,
+        "args":args
+    }
+    seed_info = {
+        "seed": seed,
+        "subseed":subseed
+    }
+    p = create_processor(gen_dict,None,seed_info)
+    movie_frames = get_mov_frame_count(mov_file)
+    originalFrames = []
+    for i in range(m2m_animate_test_frames):
+        while(True):
+            frameNum = int(random.uniform(0, movie_frames))
+            if(frameNum not in originalFrames):
+                originalFrames.append(frameNum)
+                break
+    print(originalFrames)
+    state.job_count = m2m_animate_test_frames
+    processing_start_time = datetime.now()
+    frames_preprocess, frames_postprocess,frames_mask, main_path, file_name = create_folders(mov_file,processing_start_time,True)
+    images = getMovTestFrames(mov_file, movie_frames,originalFrames) 
+    generate_images = []
+    print(f"Seed:{p.seed}")
+    print(f"Subseed:{p.subseed}")
+    for i,image in enumerate(images):
+        state.job = i
+        img = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB), 'RGB')
+        save_image(img,i,frames_preprocess)
+        p.init_images = [img] * p.batch_size
+        proc = scripts_m2m_animate.run(p, *args)
+        if proc is None:
+            processed = process_images(p)
+            gen_image = processed.images[0]
+            if(enable_hr):
+                print("\nScaling Image")
+                new_width = int(width * hr_scale)
+                new_height = int(height * hr_scale)
+                gen_image = sdimages.resize_image(0, gen_image, new_width, new_height, upscaler_name=hr_upscaler)
+            save_image(gen_image,i,frames_postprocess)
+            generate_images.append(gen_image)
+    processed = Processed(p, [], p.seed, "")
+    
+    p.close()
+
+    shared.total_tqdm.clear()
+
+    generation_info_js = processed.js()
+    if opts.samples_log_stdout:
+        print(generation_info_js)
+    return generate_images, generation_info_js, plaintext_to_html(processed.info), plaintext_to_html(
+        processed.comments, classname="comments")      

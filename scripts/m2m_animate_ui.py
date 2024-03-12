@@ -138,14 +138,10 @@ class Toprow:
             with gr.Column(scale=1, elem_id=f"{id_part}_actions_column"):
                 with gr.Row(elem_id=f"{id_part}_generate_box", elem_classes="generate-box mb-1"):
                     with gr.Row():
-                        self.interruptMain = gr.Button(
-                            "Interrupt",
-                            elem_id=f"{id_part}_main_interrupt",
-                            elem_classes="generate-box-interrupt",
-                        )
-                        self.submit = gr.Button(
-                            "Generate Video", elem_id=f"{id_part}_main_generate", variant="primary"
-                        )
+                        self.interruptMain = gr.Button('Interrupt', elem_id=f"m2manimate_interrupt", elem_classes="generate-box-interrupt", tooltip="End generation immediately or after completing current batch")
+                        self.skipMain = gr.Button('Skip', elem_id=f"m2manimate_skip", elem_classes="generate-box-skip", tooltip="Stop generation of current batch and continues onto next batch")
+                        self.interruptingMain = gr.Button('Interrupting...', elem_id=f"m2manimate_interrupting", elem_classes="generate-box-interrupting", tooltip="Interrupting generation...")
+                        self.submitMain = gr.Button('Generate Video', elem_id=f"m2manimate_generate", variant='primary', tooltip="Right click generate forever menu")
 
                         self.interruptMain.click(
                             fn=lambda: shared.state.interrupt(),
@@ -153,14 +149,10 @@ class Toprow:
                             outputs=[],
                         )
                     with gr.Row():
-                        self.interruptTest = gr.Button(
-                            "Interrupt",
-                            elem_id=f"{id_part}_test_interrupt",
-                            elem_classes="generate-box-interrupt",
-                        )
-                        self.submitTest = gr.Button(
-                            "Generate Test Frames", elem_id=f"{id_part}_test_generate", variant="primary"
-                        )
+                        self.interruptTest = gr.Button('Interrupt', elem_id=f"m2mtestframe_interrupt", elem_classes="generate-box-interrupt", tooltip="End generation immediately or after completing current batch")
+                        self.skipTest = gr.Button('Skip', elem_id=f"m2mtestframe_skip", elem_classes="generate-box-skip", tooltip="Stop generation of current batch and continues onto next batch")
+                        self.interruptingTest = gr.Button('Interrupting...', elem_id=f"m2mtestframe_interrupting", elem_classes="generate-box-interrupting", tooltip="Interrupting generation...")
+                        self.submitTest = gr.Button('Generate Test Frames', elem_id=f"m2mtestframe_generate", variant='primary', tooltip="Right click generate forever menu")
 
                         self.interruptTest.click(
                             fn=lambda: shared.state.interrupt(),
@@ -266,27 +258,12 @@ Requested path was: {f}
                     tooltip="Open images output directory.",
                 )
 
-                if tabname != "extras":
-                    save = ToolButton(
-                        "💾",
-                        elem_id=f"save_{tabname}",
-                        tooltip=f"Save the image to a dedicated directory ({shared.opts.outdir_save}).",
-                    )
-
             open_folder_button.click(
                 fn=lambda: open_folder(shared.opts.outdir_samples or outdir),
                 inputs=[],
                 outputs=[],
             )
 
-            download_files = gr.File(
-                None,
-                file_count="multiple",
-                interactive=False,
-                show_label=False,
-                visible=False,
-                elem_id=f"download_files_{tabname}",
-            )
 
             with gr.Group():
                 html_info = gr.HTML(
@@ -311,16 +288,6 @@ Requested path was: {f}
                         show_progress=False,
                     )
 
-                save.click(
-                    fn=call_queue.wrap_gradio_call(save_video),
-                    inputs=[result_video],
-                    outputs=[
-                        download_files,
-                        html_log,
-                    ],
-                    show_progress=False,
-                )
-
             return result_gallery, result_video, generation_info, html_info, html_log
 
 def on_ui_tabs():
@@ -328,7 +295,7 @@ def on_ui_tabs():
 
     with gr.Blocks(analytics_enabled=False) as m2m_animate_interface:
         toprow = Toprow(is_img2img=False, id_part=id_part)
-        dummy_component = gr.Label(visible=False)
+        dummy_component = gr.Label(visible=False,)
         with gr.Tab(
             "Generation", id=f"{id_part}_generation"
         ) as m2m_animate_generation_tab, ResizeHandleRow(equal_height=False):
@@ -493,21 +460,23 @@ def on_ui_tabs():
                             custom_inputs = scripts_m2m_animate.setup_ui()
                     
                     elif category == "seed":
+                        with gr.Group(visible=False):
+                            scripts_m2m_animate.setup_ui_for_section(category)
                         with FormRow(elem_id=f"{id_part}_seed_settings") as row:
                             with gr.Row(elem_id=f"{id_part}_seed_row"):
-                                seed = gr.Number(label='Seed', value=-1, elem_id=f"{id_part}_seed", min_width=100, precision=0)
-                                random_seed = ToolButton(random_symbol, elem_id=f"{id_part}_random_seed", tooltip="Set seed to -1, which will cause a new random number to be used every time")
-                                reuse_seed = ToolButton(reuse_symbol, elem_id=f"{id_part}_reuse_seed", tooltip="Reuse seed from last generation, mostly useful if it was randomized")
+                                seedGen = gr.Number(label='Seed', value=-1, elem_id=f"{id_part}_seed", min_width=100, precision=0)
+                                random_seedGen = ToolButton(random_symbol, elem_id=f"{id_part}_random_seed", tooltip="Set seed to -1, which will cause a new random number to be used every time")
+                                reuse_seedGen = ToolButton(reuse_symbol, elem_id=f"{id_part}_reuse_seed", tooltip="Reuse seed from last generation, mostly useful if it was randomized")
                             with gr.Row(elem_id=f"{id_part}_subseed_row"):
-                                subseed = gr.Number(label='Variation seed', value=-1, elem_id=f"{id_part}_subseed", precision=0)
-                                random_subseed = ToolButton(random_symbol, elem_id=f"{id_part}_random_subseed")
-                                reuse_subseed = ToolButton(reuse_symbol, elem_id=f"{id_part}_reuse_subseed")
+                                subseedGen = gr.Number(label='Variation seed', value=-1, elem_id=f"{id_part}_subseed", precision=0)
+                                random_subseedGen = ToolButton(random_symbol, elem_id=f"{id_part}_random_subseed")
+                                reuse_subseedGen = ToolButton(reuse_symbol, elem_id=f"{id_part}_reuse_subseed")
 
-                            random_seed.click(fn=None, _js="function(){setRandomSeed('" + f"{id_part}_seed" + "')}", show_progress=False, inputs=[], outputs=[])
-                            random_subseed.click(fn=None, _js="function(){setRandomSeed('" + f"{id_part}_subseed" + "')}", show_progress=False, inputs=[], outputs=[])
+                            random_seedGen.click(fn=None, _js="function(){setRandomSeed('" + f"{id_part}_seed" + "')}", show_progress=False, inputs=[], outputs=[])
+                            random_subseedGen.click(fn=None, _js="function(){setRandomSeed('" + f"{id_part}_subseed" + "')}", show_progress=False, inputs=[], outputs=[])
 
-                            reuse_seed.click(fn=load_prev_seed, show_progress=True,inputs=[seed], outputs=[seed])
-                            reuse_subseed.click(fn=load_prev_subseed, show_progress=True,inputs=[subseed], outputs=[subseed])
+                            reuse_seedGen.click(fn=load_prev_seed, show_progress=True,inputs=[seedGen], outputs=[seedGen])
+                            reuse_subseedGen.click(fn=load_prev_subseed, show_progress=True,inputs=[subseedGen], outputs=[subseedGen])
 
                     if category not in {"accordions","seed"}:
 
@@ -555,7 +524,8 @@ def on_ui_tabs():
                 )
 
             m2m_animate_args = dict(
-                fn=m2m_animate.animate,
+                fn=wrap_gradio_gpu_call(m2m_animate.animate, extra_outputs=[None, "", ""]),
+                _js="submit_m2m_animate",
                 inputs=[
                     dummy_component,
                     toprow.prompt,
@@ -582,11 +552,48 @@ def on_ui_tabs():
                     occlusion_mask_difo_multiplier,
                     occlusion_mask_difs_multiplier,
                     occlusion_mask_trailing,
-                    blend_alpha
+                    blend_alpha,
+                    seedGen,
+                    subseedGen,
                 ]
                 + custom_inputs,
                 outputs=[
                     result_video,
+                    generation_info,
+                    html_info,
+                    html_log,
+                ],
+                show_progress=False,
+            )
+
+            m2m_test_frame_args = dict(
+                fn=wrap_gradio_gpu_call(m2m_animate.test_frames, extra_outputs=[None, '', '']),
+                _js="submitTestFrame",
+                inputs=[
+                    dummy_component,
+                    toprow.prompt,
+                    toprow.negative_prompt,
+                    toprow.ui_styles.dropdown,
+                    init_mov,
+                    steps,
+                    sampler_name,
+                    cfg_scale,
+                    image_cfg_scale,
+                    denoising_strength,
+                    height,
+                    width,
+                    resize_mode,
+                    override_settings,
+                    noise_multiplier,
+                    enable_hr,
+                    hr_scale,
+                    hr_upscaler,
+                    seedGen,
+                    subseedGen,
+                ]
+                + custom_inputs,
+                outputs=[
+                    m2m_animate_gallery,
                     generation_info,
                     html_info,
                     html_log,
@@ -609,8 +616,8 @@ def on_ui_tabs():
                     enable_hr,
                     hr_scale,
                     hr_upscaler,
-                    seed,
-                    subseed
+                    seedGen,
+                    subseedGen
                 ],
                 outputs=[
                     toprow.prompt,
@@ -625,8 +632,8 @@ def on_ui_tabs():
                     enable_hr,
                     hr_scale,
                     hr_upscaler,
-                    seed,
-                    subseed
+                    seedGen,
+                    subseedGen
                 ],
                 show_progress=True,
             )
@@ -646,13 +653,14 @@ def on_ui_tabs():
                     enable_hr,
                     hr_scale,
                     hr_upscaler,
-                    seed,
-                    subseed
+                    seedGen,
+                    subseedGen
                 ],
                 show_progress=True,
             )
 
-            toprow.submit.click(**m2m_animate_args)
+            toprow.submitMain.click(**m2m_animate_args)
+            toprow.submitTest.click(**m2m_test_frame_args)
             toprow.save.click(**save_settings_args)
             toprow.load.click(**load_settings_args)
 

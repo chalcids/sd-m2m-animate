@@ -91,6 +91,38 @@ def get_mov_all_images(file, frames, rgb=False):
     cap.release()
     return image_list
 
+def getMovTestFrames(file, frames,testFrames, rgb=False):
+    if file is None:
+        return None
+    cap = cv2.VideoCapture(file)
+
+    if not cap.isOpened():
+        return None
+
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    if frames > fps:
+        print('Waring: The set number of frames is greater than the number of video frames')
+        frames = int(fps)
+
+    skip = fps // frames
+    count = 1
+    fs = 1
+    image_list = []
+    while (True):
+        flag, frame = cap.read()
+        if not flag:
+            break
+        else:
+            if fs % skip == 0:
+                if rgb:
+                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                if(count in testFrames):
+                    image_list.append(frame)
+                count += 1
+        fs += 1
+    cap.release()
+    return image_list
+
 
 def images_to_video(images, frames, out_path):
     if platform.system() == 'Windows':
@@ -133,7 +165,7 @@ def images_to_video_cv2(images, frames, out_path, codec):
     video.release()
     return out_path
 
-def create_folders(video, start_date):
+def create_folders(video, start_date,testFrames = False):
     if not os.path.exists(shared.opts.data.get("m2m_animate_output_dir", m2m_animate_output_dir)):
         os.mkdir(shared.opts.data.get("m2m_animate_output_dir", m2m_animate_output_dir))
     file_name = os.path.basename(video)
@@ -154,7 +186,7 @@ def create_folders(video, start_date):
     main_path = f"{shared.opts.data.get('m2m_animate_output_dir', m2m_animate_output_dir)}/{file_name}"
     if not os.path.exists(main_path):
            os.mkdir(main_path)
-    if(shared.opts.data.get("m2m_animate_export_frames", m2m_animate_export_frames) == True):
+    if(shared.opts.data.get("m2m_animate_export_frames", m2m_animate_export_frames) == True or testFrames == True):
         frames_preprocess = f"{main_path}/frames_export"
         if not os.path.exists(frames_preprocess):
             os.mkdir(frames_preprocess)
