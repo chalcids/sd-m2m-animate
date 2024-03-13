@@ -300,7 +300,8 @@ def create_processor(gen_dict,mask,seed_info=None):
     if(seed_info):
         p.seed = seed_info["seed"]
         p.seed_checkbox = True
-        p.subseed_strength = seed_info["subseed"]
+        p.subseed = seed_info["subseed"]
+        p.subseed_strength = 1
     return p
 
 def test_frames(id_task: str,
