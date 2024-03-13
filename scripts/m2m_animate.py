@@ -373,6 +373,8 @@ def test_frames(id_task: str,
     print(f"Subseed:{p.subseed}")
     for i,image in enumerate(images):
         state.job = i
+        if state.interrupted:
+            break
         img = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB), 'RGB')
         save_image(img,i,frames_preprocess)
         p.init_images = [img] * p.batch_size
