@@ -20,7 +20,7 @@ from modules.shared import opts, state
 from modules.ui import plaintext_to_html
 import modules.scripts as scripts
 
-from scripts.m2m_animate_util import create_folders,get_mov_frame_count, get_mov_all_images, images_to_video, save_images, save_image, save_video_settings, getMovTestFrames
+from scripts.m2m_animate_util import create_folders,get_mov_frame_count, get_mov_all_images, images_to_video, save_images, save_image, save_video_settings, getMovTestFrames, save_seed_settings
 from scripts.m2m_animate_config import m2m_animate_output_dir, m2m_animate_export_frames,m2m_animate_save_mask,m2m_animate_enable_mask, m2m_animate_test_frames
 from scripts.raft_utils import RAFT_clear_memory,generate_mask
 
@@ -249,10 +249,12 @@ def animate(id_task: str,
     print(f'\nStart parsing the number of mov frames')
     generate_video = process_m2m_animate(p,gen_dict, mov_file, movie_frames, max_frames, enable_hr, hr_scale,hr_upscaler, width, height, occlusion_mask_blur,occlusion_mask_flow_multiplier,occlusion_mask_difo_multiplier,occlusion_mask_difs_multiplier,occlusion_mask_trailing,blend_alpha, args)
     processed = Processed(p, [], p.seed, "")
-    
+    save_seed_settings(p.seed, p.subseed)
     p.close()
 
     shared.total_tqdm.clear()
+
+
 
     generation_info_js = processed.js()
     if opts.samples_log_stdout:
@@ -391,10 +393,33 @@ def test_frames(id_task: str,
             save_image(gen_image,i,frames_postprocess)
             generate_images.append(gen_image)
     processed = Processed(p, [], p.seed, "")
-    
-    p.close()
+    save_seed_settings(p.seed, p.subseed)
+
 
     shared.total_tqdm.clear()
+    settings_dict = {
+        "prompt":gen_dict["prompt"],
+        "negative_prompt":gen_dict["negative_prompt"],
+        "styles":gen_dict["prompt_styles"],
+        "sampler_name":gen_dict["sampler_name"],
+        "seed":p.seed,
+        "subseed":p.subseed,
+        "steps":gen_dict["steps"],
+        "cfg_scale":gen_dict["cfg_scale"],
+        "width":gen_dict["width"],
+        "height":gen_dict["height"],
+        "resize_mode":gen_dict["resize_mode"],
+        "denoising_strength":gen_dict["denoising_strength"],
+        "image_cfg_scale":gen_dict["image_cfg_scale"],
+        "noise_multiplier":gen_dict["noise_multiplier"],
+        "mask_blur":4,
+        "inpainting_fill":1,
+        "inpaint_full_res":False,
+        "inpaint_full_res_padding":32,
+        "inpainting_mask_invert":0,
+    }
+    p.close()
+    save_video_settings(settings_dict,main_path)
 
     generation_info_js = processed.js()
     if opts.samples_log_stdout:
