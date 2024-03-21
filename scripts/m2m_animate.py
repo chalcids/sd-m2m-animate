@@ -369,6 +369,7 @@ def test_frames(id_task: str,
     print(originalFrames)
     state.job_count = m2m_animate_test_frames
     processing_start_time = datetime.now()
+    processing.fix_seed(p)
     frames_preprocess, frames_postprocess,frames_mask, main_path, file_name = create_folders(mov_file,processing_start_time,True)
     images = getMovTestFrames(mov_file, movie_frames,originalFrames) 
     generate_images = []
