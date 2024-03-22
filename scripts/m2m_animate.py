@@ -360,14 +360,14 @@ def test_frames(id_task: str,
     p = create_processor(gen_dict,None,seed_info)
     movie_frames = get_mov_frame_count(mov_file)
     originalFrames = []
-    for i in range(m2m_animate_test_frames):
+    for i in range(shared.opts.data.get("m2m_animate_test_frames", m2m_animate_test_frames)):
         while(True):
             frameNum = int(random.uniform(0, movie_frames))
             if(frameNum not in originalFrames):
                 originalFrames.append(frameNum)
                 break
     print(originalFrames)
-    state.job_count = m2m_animate_test_frames
+    state.job_count = shared.opts.data.get("m2m_animate_test_frames", m2m_animate_test_frames)
     processing_start_time = datetime.now()
     processing.fix_seed(p)
     frames_preprocess, frames_postprocess,frames_mask, main_path, file_name = create_folders(mov_file,processing_start_time,True)
